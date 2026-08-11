@@ -6,6 +6,7 @@ swift build
 swift test
 swift run card-field-eval Fixtures/Synthetic/phase1.json >/dev/null
 swift run card-field-eval Fixtures/Synthetic/public-alpha.json >/dev/null
+swift run card-field-scan --help >/dev/null
 
 docc_validation_dir=$(mktemp -d)
 trap 'rm -r "$docc_validation_dir"' EXIT

@@ -2,17 +2,23 @@
 
 ## Boundaries
 
-`CardFieldCore` begins after front-side OCR and ends with field suggestions. It never receives images, persists cards, resolves identities, writes contacts, or performs network operations. The optional `AppleVisionAdapter` accepts an image for the duration of a synchronous local recognition call, then passes provider-neutral tokens into the core. It does not capture, retain, or persist that image.
+`CardFieldCore` begins after front-side OCR and ends with field suggestions. It never receives images, persists cards, resolves identities, writes contacts, or performs network operations. The optional `AppleVisionAdapter` accepts an image for the duration of a synchronous local recognition call, isolates and perspective-corrects one likely foreground card when evidence supports it, then passes provider-neutral tokens into the core. It does not capture, retain, or persist that image.
 
 ```text
-Host capture -> AppleVisionScanner (local OCR) --+
-                                                 +-> [OCRToken] -> CardFieldCore -> CardFieldResult
-Other OCR provider -> provider adapter ----------+                    |   |   |
-                                                                     base pack personal
-                                                                     rules rules corrections
-                                                                               |
-                                                                               v
-                                                               contribution sanitizer
+Host capture -> card-region detection -> accepted: perspective-corrected card --+
+                                  \-> conservative fallback: full upright image --+
+                                                                                  v
+                                                    AppleVisionScanner (local OCR) --+
+Other OCR provider -> provider adapter ------------------------------------------+-> [OCRToken]
+                                                                                       |
+                                                                                       v
+                                                                         CardFieldCore -> CardFieldResult
+                                                                          |   |   |
+                                                                         base pack personal
+                                                                         rules rules corrections
+                                                                                   |
+                                                                                   v
+                                                                   contribution sanitizer
 
 Synthetic fixtures -> CardFieldEvaluation -> precision/recall report
 ```
@@ -25,7 +31,13 @@ The core defines provider-neutral contracts, OCR normalization, typed extraction
 
 ### AppleVisionAdapter
 
-The optional adapter validates encoded image data, resolves explicit or EXIF orientation, runs `VNRecognizeTextRequest`, converts `VNRecognizedTextObservation` values to `OCRToken`, and invokes a host-configurable `CardFieldClassifier`. The target contains all Apple Vision, ImageIO, and Core Graphics imports. It does not access a camera, retain an image, persist output, or use the network. Existing Vision observations can still be converted without running another request.
+The optional adapter validates encoded image data and resolves explicit or EXIF orientation. By default, it asks Vision for a bounded set of plausible card quadrilaterals, ranks them using geometry plus contact-text evidence, perspective-corrects the strongest candidates, and recognizes the selected region. When no candidate clears the evidence threshold, it recognizes the complete upright image instead. The result reports whether selection was `isolated`, `fullImageFallback`, or `disabled`, including source-image region metadata for an isolated card.
+
+The adapter converts `VNRecognizedTextObservation` values to `OCRToken` and invokes a host-configurable `CardFieldClassifier`. The target contains all Apple Vision, Core Image, ImageIO, and Core Graphics imports. It does not access a camera, retain an image, persist output, or use the network. Existing Vision observations can still be converted without running another request.
+
+### card-field-scan
+
+The Apple-platform CLI exercises the adapter without adding storage behavior. It reads only paths explicitly supplied by the caller and writes JSON to standard output. Structured fields are the default; raw OCR tokens require `--include-tokens`. The scanner isolates one card rather than enumerating every card in a scene. See [Local Image Scanning](Docs/IMAGE_SCANNING.md).
 
 ### CardFieldEvaluation
 
@@ -53,7 +65,7 @@ Arbitrary executable scripts are not supported. This keeps packs portable, inspe
 
 Syntax-specific fields receive confidence from OCR quality plus structural validation. Identity fields combine conservative syntax, OCR confidence, layout prominence, nearby titles, and email-local-part overlap. Organizations use suffixes, institution vocabulary, uppercase or numeric brand shape, and email-domain hints.
 
-Every field contains its normalized and original value, confidence, evidence, alternatives, and source token identifiers. A host must treat the output as an editable suggestion. The classifier intentionally returns unresolved identity when evidence is weak.
+Every field contains its normalized and original value, confidence, evidence, alternatives, and source token identifiers. A host must treat the output as an editable suggestion. The classifier intentionally returns unresolved identity when evidence is weak. Contact persistence, identity matching, automatic merging, and relationship intelligence remain host-owned CRM decisions.
 
 ## Compatibility
 
@@ -61,4 +73,4 @@ Contracts and rule packs carry explicit versions. Additive optional fields are p
 
 ## Security and data flow
 
-The library does not log source text, transmit data, retain images, or include telemetry. Apple Vision recognition is local to the calling device. Sanitization converts every token to a controlled placeholder and buckets OCR confidence. Original text and personal correction values are excluded from contribution drafts. Sharing the draft remains an explicit host or user action.
+The library does not log source text, transmit data, retain images, or include telemetry. Apple Vision recognition is local to the calling device. Real business-card photos and their OCR or PII are limited to private, transient local validation and are never committed to the public repository. Sanitization converts every token to a controlled placeholder and buckets OCR confidence. Original text and personal correction values are excluded from contribution drafts. Sharing the draft remains an explicit host or user action.

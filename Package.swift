@@ -13,12 +13,17 @@ let package = Package(
     .library(name: "AppleVisionAdapter", targets: ["AppleVisionAdapter"]),
     .library(name: "CardFieldEvaluation", targets: ["CardFieldEvaluation"]),
     .executable(name: "card-field-eval", targets: ["card-field-eval"]),
+    .executable(name: "card-field-scan", targets: ["card-field-scan"]),
   ],
   targets: [
     .target(name: "CardFieldCore"),
     .target(name: "AppleVisionAdapter", dependencies: ["CardFieldCore"]),
     .target(name: "CardFieldEvaluation", dependencies: ["CardFieldCore"]),
     .executableTarget(name: "card-field-eval", dependencies: ["CardFieldEvaluation"]),
+    .executableTarget(
+      name: "card-field-scan",
+      dependencies: ["AppleVisionAdapter", "CardFieldCore"]
+    ),
     .testTarget(
       name: "CardFieldCoreTests",
       dependencies: ["CardFieldCore", "CardFieldEvaluation"]

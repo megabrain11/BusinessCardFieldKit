@@ -2,7 +2,7 @@
 
 BusinessCardFieldKit is a privacy-first, explainable engine for normalizing front-side business-card OCR and classifying text into structured fields. It is not a contact database, identity service, CRM, image store, or relationship product.
 
-Phase 1 is a pure Swift Package. `CardFieldCore` has no dependency on UIKit, SwiftUI, Vision, image types, file storage, or networking. Hosts may supply provider-neutral OCR observations directly. On Apple platforms, the optional `AppleVisionAdapter` can also recognize a front-image `Data` or `CGImage` locally and pass its observations to the core. Hosts still decide how to capture images, review suggestions, persist approved values, and handle an optional back image.
+Phase 1 is a pure Swift Package. `CardFieldCore` has no dependency on UIKit, SwiftUI, Vision, image types, file storage, or networking. Hosts may supply provider-neutral OCR observations directly. On Apple platforms, the optional `AppleVisionAdapter` can isolate and perspective-correct one likely foreground card, recognize it locally, and pass provider-neutral observations to the core. It conservatively falls back to full-image OCR when isolation is not reliable. Hosts still decide how to capture images, review suggestions, persist approved values, and handle an optional back image.
 
 ## Highlights
 
@@ -14,7 +14,7 @@ Phase 1 is a pure Swift Package. `CardFieldCore` has no dependency on UIKit, Swi
 - Sanitized structural contribution drafts with no automatic upload
 - Language-neutral JSON contracts and rule-pack schemas
 - Synthetic evaluation fixtures and a field-level precision/recall CLI
-- An optional local Apple Vision image-to-fields scanner isolated from the core
+- An optional local Apple Vision scanner with automatic foreground-card isolation, perspective correction, and conservative fallback
 
 ## Coordinate contract
 
@@ -70,6 +70,14 @@ func scanCardFront(_ frontImageData: Data) throws {
 
 Encoded-image EXIF orientation is honored automatically. For a raw `CGImage`, pass the orientation needed to make the card upright. The synchronous scanner should run away from latency-sensitive UI work. It retains no image and performs no network request.
 
+For local image testing on Apple platforms, use the included command:
+
+```sh
+swift run card-field-scan --language ko-KR --language en-US ./card-front.jpg
+```
+
+The command writes reviewable structured JSON to standard output and omits raw OCR tokens unless `--include-tokens` is requested. See [Local Image Scanning](Docs/IMAGE_SCANNING.md) for region-selection metadata, batch usage, CRM review guidance, and known limits.
+
 For a complete integration walkthrough, see the [CardFieldCore DocC catalog](Sources/CardFieldCore/CardFieldCore.docc/CardFieldCore.md).
 
 ## Package products
@@ -78,12 +86,14 @@ For a complete integration walkthrough, see the [CardFieldCore DocC catalog](Sou
 - `AppleVisionAdapter`: locally recognizes a front image with Vision, converts observations into core tokens, and classifies them
 - `CardFieldEvaluation`: decodes synthetic fixtures and reports field-level precision and recall
 - `card-field-eval`: command-line fixture runner
+- `card-field-scan`: local Apple-platform image scanner that emits structured JSON
 
 Run the package and evaluation suite:
 
 ```sh
 swift test
 swift run card-field-eval Fixtures/Synthetic/phase1.json
+swift run card-field-scan --help
 ```
 
 ## Rules and corrections
@@ -104,13 +114,14 @@ Google ML Kit, Tesseract, cloud OCR, and browser OCR can implement the same adap
 
 Only front-side local OCR adapters, OCR normalization, and field classification belong here. Relationship notes, meeting memories, relationship graphs, recommendations, identity resolution, shared contact databases, server deduplication, private user data, production datasets, image storage, and back-side analysis are out of scope.
 
-The package has no telemetry or networking. Do not submit real card images, OCR output, names, email addresses, phone numbers, or addresses. Read [PRIVACY.md](PRIVACY.md) before contributing.
+The package has no telemetry or networking. Real business-card photos and their OCR or PII may be used only for private, transient local validation; they are never committed to this public repository. Do not submit real card images, OCR output, names, email addresses, phone numbers, or addresses. Read [PRIVACY.md](PRIVACY.md) before contributing.
 
 A CRM such as Relationship Memory can reuse the public interpretation contracts, rules, and evaluation tools while retaining real scans, corrections, contact records, identity matching, review UX, and relationship intelligence as private host capabilities. See the [integration boundary](Docs/RELATIONSHIP_MEMORY_INTEGRATION.md).
 
 ## Project documentation
 
 - [Architecture](ARCHITECTURE.md)
+- [Local image scanning](Docs/IMAGE_SCANNING.md)
 - [Roadmap](ROADMAP.md)
 - [Changelog](CHANGELOG.md)
 - [Support policy](SUPPORT.md)

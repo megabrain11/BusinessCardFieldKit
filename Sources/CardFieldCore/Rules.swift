@@ -54,15 +54,17 @@ public struct RulePack: Codable, Equatable, Sendable {
 }
 
 enum BaseRules {
-  static let version = "base-1.0.0"
+  static let version = "base-1.1.0"
 
   static let pack = RulePack(
     identifier: "org.businesscardfieldkit.base",
     version: version,
     organizationSuffixes: [
       "inc", "inc.", "llc", "ltd", "ltd.", "corp", "corporation", "company", "co.",
-      "group", "partners", "holdings", "studio", "labs", "lab", "works", "systems",
-      "주식회사", "유한회사", "재단", "재단법인", "협회", "연구원", "연구소",
+      "group", "partners", "holdings", "ventures", "venture", "capital", "studio", "labs", "lab",
+      "works", "systems", "technology", "technologies", "solutions",
+      "주식회사", "(주)", "㈜", "유한회사", "(재)", "재단", "재단법인", "협회", "연구원",
+      "연구소",
     ],
     organizationTerms: [
       "university", "college", "school", "institute", "foundation", "association", "agency",
@@ -70,31 +72,39 @@ enum BaseRules {
       "대학교", "대학", "정부", "청", "부", "위원회", "공단", "공사", "센터",
     ],
     jobTitles: [
-      "chief executive officer", "chief technology officer", "chief operating officer", "ceo",
-      "cto", "coo",
-      "founder", "co-founder", "president", "vice president", "director", "manager", "lead", "head",
+      "chief executive officer", "chief technology officer", "chief operating officer",
+      "chief legal officer", "ceo", "cto", "coo", "clo",
+      "founder", "co-founder", "president", "vice president", "chairman", "group chairman",
+      "director", "manager", "lead", "head",
       "engineer", "designer", "developer", "architect", "researcher", "scientist", "professor",
       "attorney",
       "consultant", "specialist", "coordinator", "officer", "partner", "principal", "analyst",
       "대표", "대표이사", "이사", "상무", "전무", "부장", "차장", "과장", "대리", "주임", "사원",
-      "교수", "연구원", "변호사", "팀장", "실장", "센터장", "매니저", "엔지니어", "디자이너",
+      "교수", "연구원", "변호사", "팀장", "실장", "센터장", "본부장", "주무관", "전문위원", "매니저",
+      "엔지니어", "디자이너",
     ],
     departmentTerms: [
       "engineering", "design", "product", "marketing", "sales", "finance", "operations", "research",
+      "investment", "analytics", "customer services", "online marketing", "export support",
+      "global business", "industry policy",
       "human resources", "business development", "legal", "communications", "전략", "기획", "개발",
-      "디자인", "마케팅", "영업", "재무", "인사", "홍보", "연구", "사업개발", "법무", "팀", "부서",
+      "디자인", "마케팅", "영업", "재무", "인사", "홍보", "연구", "사업개발", "법무", "정책과",
+      "지원센터", "사업본부", "사업팀", "산업정책본부", "팀", "부서",
     ],
     phoneLabels: [
       "m": .mobile, "c": .mobile, "mobile": .mobile, "cell": .mobile, "mob": .mobile,
+      "모바일": .mobile,
       "휴대": .mobile, "휴대폰": .mobile, "핸드폰": .mobile,
       "o": .work, "t": .work, "d": .work, "tel": .work, "telephone": .work,
       "office": .work, "phone": .work, "전화": .work, "직통": .work,
       "f": .fax, "fax": .fax, "팩스": .fax,
     ],
     addressTerms: [
-      "street", "st.", "road", "rd.", "avenue", "ave", "boulevard", "blvd", "lane", "suite",
+      "address", "registered address", "reg address", "street", "st.", "road", "rd.", "avenue",
+      "ave", "boulevard", "blvd", "lane", "suite",
       "floor",
-      "building", "plaza", "district", "city", "state", "province", "postal", "zip", "서울", "부산",
+      "building", "drive", "tower", "park", "plaza", "district", "city", "state", "province",
+      "postal", "zip", "서울", "부산",
       "대구",
       "인천", "광주", "대전", "울산", "세종", "경기", "강원", "충청", "전라", "경상", "제주", "로", "길",
       "구", "동", "번지", "층",

@@ -135,6 +135,8 @@ public struct ClassifiedValue: Codable, Equatable, Sendable {
 public enum CardFieldWarning: String, Codable, Equatable, Sendable {
   case noVisiblePersonName
   case ambiguousPersonName
+  case identityConflict
+  case reviewRecommended
   case ambiguousPhoneNumber
   case lowConfidenceFields
   case invalidBoundingBox
