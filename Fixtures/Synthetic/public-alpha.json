@@ -1,0 +1,404 @@
+[
+  {
+    "identifier": "public-alpha-korean-vertical",
+    "observations": [
+      {"id":"name","text":"가온 누리","boundingBox":{"x":0.08,"y":0.82,"width":0.30,"height":0.09},"confidence":0.97,"language":"ko"},
+      {"id":"title","text":"제품 팀장","boundingBox":{"x":0.08,"y":0.70,"width":0.30,"height":0.05},"confidence":0.96,"language":"ko"},
+      {"id":"organization","text":"새봄 연구소","boundingBox":{"x":0.08,"y":0.57,"width":0.42,"height":0.07},"confidence":0.97,"language":"ko"},
+      {"id":"email","text":"gaon.nuri@saebom.example","boundingBox":{"x":0.08,"y":0.31,"width":0.58,"height":0.04},"confidence":0.98,"language":"en"},
+      {"id":"mobile","text":"휴대폰 010-0000-0001","boundingBox":{"x":0.08,"y":0.23,"width":0.45,"height":0.04},"confidence":0.96,"language":"ko"},
+      {"id":"address","text":"서울특별시 예시구 가상로 42, 7층","boundingBox":{"x":0.08,"y":0.12,"width":0.70,"height":0.04},"confidence":0.94,"language":"ko"}
+    ],
+    "expected": {
+      "fullName": ["가온 누리"],
+      "jobTitle": ["제품 팀장"],
+      "organization": ["새봄 연구소"],
+      "emailAddresses": ["gaon.nuri@saebom.example"],
+      "mobilePhoneNumbers": ["01000000001"],
+      "addresses": ["서울특별시 예시구 가상로 42, 7층"]
+    }
+  },
+  {
+    "identifier": "public-alpha-english-standard",
+    "observations": [
+      {"id":"name","text":"Avery Quill","boundingBox":{"x":0.09,"y":0.82,"width":0.34,"height":0.09},"confidence":0.98,"language":"en"},
+      {"id":"title","text":"Product Manager","boundingBox":{"x":0.09,"y":0.70,"width":0.35,"height":0.05},"confidence":0.96,"language":"en"},
+      {"id":"organization","text":"LANTERN SYSTEMS","boundingBox":{"x":0.09,"y":0.57,"width":0.48,"height":0.07},"confidence":0.98,"language":"en"},
+      {"id":"email","text":"avery.quill@lantern.example","boundingBox":{"x":0.09,"y":0.31,"width":0.60,"height":0.04},"confidence":0.99,"language":"en"},
+      {"id":"telephone","text":"T +1 202 555 0101","boundingBox":{"x":0.09,"y":0.23,"width":0.38,"height":0.04},"confidence":0.97,"language":"en"},
+      {"id":"website","text":"lantern.example","boundingBox":{"x":0.09,"y":0.15,"width":0.32,"height":0.04},"confidence":0.98,"language":"en"}
+    ],
+    "expected": {
+      "fullName": ["Avery Quill"],
+      "jobTitle": ["Product Manager"],
+      "organization": ["LANTERN SYSTEMS"],
+      "emailAddresses": ["avery.quill@lantern.example"],
+      "workPhoneNumbers": ["+12025550101"],
+      "websites": ["lantern.example"]
+    }
+  },
+  {
+    "identifier": "public-alpha-mixed-korean-english-name",
+    "observations": [
+      {"id":"name","text":"가온 누리 Gaon Nuri","boundingBox":{"x":0.08,"y":0.81,"width":0.48,"height":0.09},"confidence":0.97,"language":"ko-Latn"},
+      {"id":"title","text":"Product Designer","boundingBox":{"x":0.08,"y":0.68,"width":0.36,"height":0.05},"confidence":0.96,"language":"en"},
+      {"id":"organization","text":"MOSAIC STUDIO","boundingBox":{"x":0.08,"y":0.55,"width":0.42,"height":0.07},"confidence":0.98,"language":"en"},
+      {"id":"email","text":"gaon.nuri@mosaic.example","boundingBox":{"x":0.08,"y":0.22,"width":0.56,"height":0.04},"confidence":0.98,"language":"en"}
+    ],
+    "expected": {
+      "fullName": ["가온 누리 Gaon Nuri"],
+      "jobTitle": ["Product Designer"],
+      "organization": ["MOSAIC STUDIO"],
+      "emailAddresses": ["gaon.nuri@mosaic.example"]
+    }
+  },
+  {
+    "identifier": "public-alpha-mixed-latin-cjk-name",
+    "observations": [
+      {"id":"name","text":"陳星河 Xinghe Chen","boundingBox":{"x":0.08,"y":0.82,"width":0.46,"height":0.09},"confidence":0.97,"language":"zh-Latn"},
+      {"id":"title","text":"Design Director","boundingBox":{"x":0.08,"y":0.69,"width":0.35,"height":0.05},"confidence":0.96,"language":"en"},
+      {"id":"organization","text":"HARBOR LABS","boundingBox":{"x":0.08,"y":0.56,"width":0.38,"height":0.07},"confidence":0.98,"language":"en"},
+      {"id":"email","text":"xinghe.chen@harbor.example","boundingBox":{"x":0.08,"y":0.22,"width":0.58,"height":0.04},"confidence":0.98,"language":"en"}
+    ],
+    "expected": {
+      "fullName": ["陳星河 Xinghe Chen"],
+      "jobTitle": ["Design Director"],
+      "organization": ["HARBOR LABS"],
+      "emailAddresses": ["xinghe.chen@harbor.example"]
+    }
+  },
+  {
+    "identifier": "public-alpha-long-international-name",
+    "observations": [
+      {"id":"name","text":"María Lucía de la Vega-Solano","boundingBox":{"x":0.07,"y":0.82,"width":0.66,"height":0.09},"confidence":0.96,"language":"es"},
+      {"id":"title","text":"Research Director","boundingBox":{"x":0.07,"y":0.69,"width":0.40,"height":0.05},"confidence":0.95,"language":"en"},
+      {"id":"organization","text":"NORTHWIND FOUNDATION","boundingBox":{"x":0.07,"y":0.55,"width":0.58,"height":0.07},"confidence":0.98,"language":"en"},
+      {"id":"email","text":"maria.vega@northwind.example","boundingBox":{"x":0.07,"y":0.21,"width":0.62,"height":0.04},"confidence":0.98,"language":"en"}
+    ],
+    "expected": {
+      "fullName": ["María Lucía de la Vega-Solano"],
+      "jobTitle": ["Research Director"],
+      "organization": ["NORTHWIND FOUNDATION"],
+      "emailAddresses": ["maria.vega@northwind.example"]
+    }
+  },
+  {
+    "identifier": "public-alpha-name-role-same-line",
+    "observations": [
+      {"id":"identity","text":"Jordan Fable | Product Lead","boundingBox":{"x":0.08,"y":0.79,"width":0.65,"height":0.09},"confidence":0.97,"language":"en"},
+      {"id":"organization","text":"ORBITAL WORKS","boundingBox":{"x":0.08,"y":0.56,"width":0.42,"height":0.07},"confidence":0.98,"language":"en"},
+      {"id":"email","text":"jordan.fable@orbital.example","boundingBox":{"x":0.08,"y":0.22,"width":0.60,"height":0.04},"confidence":0.98,"language":"en"}
+    ],
+    "expected": {
+      "fullName": ["Jordan Fable"],
+      "jobTitle": ["Product Lead"],
+      "organization": ["ORBITAL WORKS"],
+      "emailAddresses": ["jordan.fable@orbital.example"]
+    }
+  },
+  {
+    "identifier": "public-alpha-alternate-name",
+    "observations": [
+      {"id":"multilingual-name","text":"森川空 Sora Morikawa","boundingBox":{"x":0.08,"y":0.83,"width":0.50,"height":0.08},"confidence":0.97,"language":"ja-Latn"},
+      {"id":"latin-name","text":"Sora Morikawa","boundingBox":{"x":0.08,"y":0.73,"width":0.38,"height":0.07},"confidence":0.97,"language":"en"},
+      {"id":"title","text":"Creative Director","boundingBox":{"x":0.08,"y":0.62,"width":0.38,"height":0.05},"confidence":0.96,"language":"en"},
+      {"id":"organization","text":"SKYBRIDGE STUDIO","boundingBox":{"x":0.08,"y":0.48,"width":0.50,"height":0.07},"confidence":0.98,"language":"en"},
+      {"id":"email","text":"sora.morikawa@skybridge.example","boundingBox":{"x":0.08,"y":0.20,"width":0.66,"height":0.04},"confidence":0.98,"language":"en"}
+    ],
+    "expected": {
+      "fullName": ["森川空 Sora Morikawa"],
+      "alternateNames": ["Sora Morikawa"],
+      "jobTitle": ["Creative Director"],
+      "organization": ["SKYBRIDGE STUDIO"],
+      "emailAddresses": ["sora.morikawa@skybridge.example"]
+    }
+  },
+  {
+    "identifier": "public-alpha-uppercase-organization-only",
+    "observations": [
+      {"id":"organization","text":"CERULEAN LABS","boundingBox":{"x":0.12,"y":0.72,"width":0.58,"height":0.11},"confidence":0.98,"language":"en"},
+      {"id":"website","text":"cerulean.example","boundingBox":{"x":0.12,"y":0.18,"width":0.36,"height":0.04},"confidence":0.97,"language":"en"}
+    ],
+    "expected": {
+      "organization": ["CERULEAN LABS"],
+      "websites": ["cerulean.example"]
+    }
+  },
+  {
+    "identifier": "public-alpha-numeric-organization",
+    "observations": [
+      {"id":"organization","text":"STUDIO 404","boundingBox":{"x":0.12,"y":0.72,"width":0.48,"height":0.11},"confidence":0.98,"language":"en"},
+      {"id":"website","text":"studio404.example","boundingBox":{"x":0.12,"y":0.18,"width":0.38,"height":0.04},"confidence":0.97,"language":"en"}
+    ],
+    "expected": {
+      "organization": ["STUDIO 404"],
+      "websites": ["studio404.example"]
+    }
+  },
+  {
+    "identifier": "public-alpha-compact-phone-labels",
+    "observations": [
+      {"id":"name","text":"Mira Solace","boundingBox":{"x":0.07,"y":0.85,"width":0.34,"height":0.08},"confidence":0.96,"language":"en"},
+      {"id":"title","text":"Operations Director","boundingBox":{"x":0.07,"y":0.75,"width":0.42,"height":0.05},"confidence":0.96,"language":"en"},
+      {"id":"organization","text":"PAPER KITE LLC","boundingBox":{"x":0.07,"y":0.64,"width":0.42,"height":0.07},"confidence":0.98,"language":"en"},
+      {"id":"mobile-m","text":"M: +1 202 555 0110","boundingBox":{"x":0.07,"y":0.49,"width":0.40,"height":0.04},"confidence":0.97,"language":"en"},
+      {"id":"mobile-c","text":"C +1 202 555 0111","boundingBox":{"x":0.07,"y":0.41,"width":0.40,"height":0.04},"confidence":0.97,"language":"en"},
+      {"id":"office-o","text":"O +1 202 555 0112","boundingBox":{"x":0.07,"y":0.33,"width":0.40,"height":0.04},"confidence":0.97,"language":"en"},
+      {"id":"telephone-t","text":"T +1 202 555 0113","boundingBox":{"x":0.52,"y":0.49,"width":0.40,"height":0.04},"confidence":0.97,"language":"en"},
+      {"id":"direct-d","text":"D +1 202 555 0114","boundingBox":{"x":0.52,"y":0.41,"width":0.40,"height":0.04},"confidence":0.97,"language":"en"},
+      {"id":"fax-f","text":"F +1 202 555 0115","boundingBox":{"x":0.52,"y":0.33,"width":0.40,"height":0.04},"confidence":0.97,"language":"en"}
+    ],
+    "expected": {
+      "fullName": ["Mira Solace"],
+      "jobTitle": ["Operations Director"],
+      "organization": ["PAPER KITE LLC"],
+      "mobilePhoneNumbers": ["+12025550110", "+12025550111"],
+      "workPhoneNumbers": ["+12025550112", "+12025550113", "+12025550114"],
+      "faxNumbers": ["+12025550115"]
+    }
+  },
+  {
+    "identifier": "public-alpha-korean-phone-labels",
+    "observations": [
+      {"id":"name","text":"한가람","boundingBox":{"x":0.08,"y":0.82,"width":0.28,"height":0.09},"confidence":0.97,"language":"ko"},
+      {"id":"title","text":"개발 팀장","boundingBox":{"x":0.08,"y":0.70,"width":0.30,"height":0.05},"confidence":0.96,"language":"ko"},
+      {"id":"organization","text":"푸른별 연구소","boundingBox":{"x":0.08,"y":0.57,"width":0.42,"height":0.07},"confidence":0.97,"language":"ko"},
+      {"id":"mobile","text":"휴대폰 010-0000-0011","boundingBox":{"x":0.08,"y":0.36,"width":0.43,"height":0.04},"confidence":0.96,"language":"ko"},
+      {"id":"work","text":"전화 02-000-0012","boundingBox":{"x":0.08,"y":0.28,"width":0.38,"height":0.04},"confidence":0.96,"language":"ko"},
+      {"id":"fax","text":"팩스 02-000-0013","boundingBox":{"x":0.08,"y":0.20,"width":0.38,"height":0.04},"confidence":0.96,"language":"ko"}
+    ],
+    "expected": {
+      "fullName": ["한가람"],
+      "jobTitle": ["개발 팀장"],
+      "organization": ["푸른별 연구소"],
+      "mobilePhoneNumbers": ["01000000011"],
+      "workPhoneNumbers": ["020000012"],
+      "faxNumbers": ["020000013"]
+    }
+  },
+  {
+    "identifier": "public-alpha-web-profile-social",
+    "observations": [
+      {"id":"name","text":"Rowan Pixel","boundingBox":{"x":0.08,"y":0.84,"width":0.34,"height":0.08},"confidence":0.97,"language":"en"},
+      {"id":"title","text":"Designer","boundingBox":{"x":0.08,"y":0.73,"width":0.26,"height":0.05},"confidence":0.96,"language":"en"},
+      {"id":"organization","text":"PIXEL GROVE STUDIO","boundingBox":{"x":0.08,"y":0.61,"width":0.52,"height":0.07},"confidence":0.98,"language":"en"},
+      {"id":"website","text":"pixelgrove.example","boundingBox":{"x":0.08,"y":0.43,"width":0.40,"height":0.04},"confidence":0.98,"language":"en"},
+      {"id":"linkedin","text":"linkedin.com/in/public-alpha-rowan","boundingBox":{"x":0.08,"y":0.34,"width":0.64,"height":0.04},"confidence":0.97,"language":"en"},
+      {"id":"github","text":"github.com/public-alpha-rowan","boundingBox":{"x":0.08,"y":0.25,"width":0.58,"height":0.04},"confidence":0.97,"language":"en"},
+      {"id":"social","text":"@rowan_public_alpha","boundingBox":{"x":0.08,"y":0.16,"width":0.42,"height":0.04},"confidence":0.96,"language":"en"}
+    ],
+    "expected": {
+      "fullName": ["Rowan Pixel"],
+      "jobTitle": ["Designer"],
+      "organization": ["PIXEL GROVE STUDIO"],
+      "websites": ["pixelgrove.example"],
+      "professionalProfileURLs": ["linkedin.com/in/public-alpha-rowan", "github.com/public-alpha-rowan"],
+      "socialHandles": ["@rowan_public_alpha"]
+    }
+  },
+  {
+    "identifier": "public-alpha-email-domain-organization-hint",
+    "observations": [
+      {"id":"name","text":"Nora Starling","boundingBox":{"x":0.08,"y":0.82,"width":0.36,"height":0.09},"confidence":0.97,"language":"en"},
+      {"id":"title","text":"Software Engineer","boundingBox":{"x":0.08,"y":0.69,"width":0.40,"height":0.05},"confidence":0.96,"language":"en"},
+      {"id":"organization","text":"STARLING LABS","boundingBox":{"x":0.08,"y":0.55,"width":0.42,"height":0.07},"confidence":0.93,"language":"en"},
+      {"id":"email","text":"nora.starling@starling.example","boundingBox":{"x":0.08,"y":0.21,"width":0.62,"height":0.04},"confidence":0.98,"language":"en"}
+    ],
+    "expected": {
+      "fullName": ["Nora Starling"],
+      "jobTitle": ["Software Engineer"],
+      "organization": ["STARLING LABS"],
+      "emailAddresses": ["nora.starling@starling.example"]
+    }
+  },
+  {
+    "identifier": "public-alpha-qr-heavy-no-name",
+    "observations": [
+      {"id":"instruction","text":"Scan to connect","boundingBox":{"x":0.18,"y":0.72,"width":0.42,"height":0.08},"confidence":0.95,"language":"en"},
+      {"id":"qr-caption","text":"Use the code below","boundingBox":{"x":0.18,"y":0.60,"width":0.48,"height":0.05},"confidence":0.94,"language":"en"},
+      {"id":"website","text":"connect-card.example","boundingBox":{"x":0.18,"y":0.14,"width":0.46,"height":0.04},"confidence":0.97,"language":"en"}
+    ],
+    "expected": {
+      "websites": ["connect-card.example"]
+    }
+  },
+  {
+    "identifier": "public-alpha-institute-only",
+    "observations": [
+      {"id":"organization","text":"NATIONAL IMAGINARY RESEARCH INSTITUTE","boundingBox":{"x":0.10,"y":0.70,"width":0.78,"height":0.12},"confidence":0.98,"language":"en"},
+      {"id":"website","text":"imaginary-research.example","boundingBox":{"x":0.10,"y":0.17,"width":0.50,"height":0.04},"confidence":0.97,"language":"en"}
+    ],
+    "expected": {
+      "organization": ["NATIONAL IMAGINARY RESEARCH INSTITUTE"],
+      "websites": ["imaginary-research.example"]
+    }
+  },
+  {
+    "identifier": "public-alpha-government-agency",
+    "observations": [
+      {"id":"name","text":"Avery Meadow","boundingBox":{"x":0.08,"y":0.83,"width":0.36,"height":0.08},"confidence":0.97,"language":"en"},
+      {"id":"title","text":"Policy Director","boundingBox":{"x":0.08,"y":0.72,"width":0.34,"height":0.05},"confidence":0.96,"language":"en"},
+      {"id":"organization","text":"Ministry of Imaginary Affairs","boundingBox":{"x":0.08,"y":0.58,"width":0.62,"height":0.07},"confidence":0.97,"language":"en"},
+      {"id":"email","text":"avery.meadow@imaginary-ministry.example","boundingBox":{"x":0.08,"y":0.22,"width":0.74,"height":0.04},"confidence":0.98,"language":"en"}
+    ],
+    "expected": {
+      "fullName": ["Avery Meadow"],
+      "jobTitle": ["Policy Director"],
+      "organization": ["Ministry of Imaginary Affairs"],
+      "emailAddresses": ["avery.meadow@imaginary-ministry.example"]
+    }
+  },
+  {
+    "identifier": "public-alpha-university",
+    "observations": [
+      {"id":"name","text":"Juniper Vale","boundingBox":{"x":0.08,"y":0.83,"width":0.34,"height":0.08},"confidence":0.97,"language":"en"},
+      {"id":"title","text":"Professor","boundingBox":{"x":0.08,"y":0.72,"width":0.26,"height":0.05},"confidence":0.96,"language":"en"},
+      {"id":"organization","text":"Example State University","boundingBox":{"x":0.08,"y":0.58,"width":0.56,"height":0.07},"confidence":0.97,"language":"en"},
+      {"id":"email","text":"juniper.vale@example-university.example","boundingBox":{"x":0.08,"y":0.22,"width":0.72,"height":0.04},"confidence":0.98,"language":"en"}
+    ],
+    "expected": {
+      "fullName": ["Juniper Vale"],
+      "jobTitle": ["Professor"],
+      "organization": ["Example State University"],
+      "emailAddresses": ["juniper.vale@example-university.example"]
+    }
+  },
+  {
+    "identifier": "public-alpha-association",
+    "observations": [
+      {"id":"name","text":"Milo Tempest","boundingBox":{"x":0.08,"y":0.83,"width":0.34,"height":0.08},"confidence":0.97,"language":"en"},
+      {"id":"title","text":"President","boundingBox":{"x":0.08,"y":0.72,"width":0.26,"height":0.05},"confidence":0.96,"language":"en"},
+      {"id":"organization","text":"Fictional Robotics Association","boundingBox":{"x":0.08,"y":0.58,"width":0.64,"height":0.07},"confidence":0.97,"language":"en"},
+      {"id":"email","text":"milo.tempest@robotics-association.example","boundingBox":{"x":0.08,"y":0.22,"width":0.76,"height":0.04},"confidence":0.98,"language":"en"}
+    ],
+    "expected": {
+      "fullName": ["Milo Tempest"],
+      "jobTitle": ["President"],
+      "organization": ["Fictional Robotics Association"],
+      "emailAddresses": ["milo.tempest@robotics-association.example"]
+    }
+  },
+  {
+    "identifier": "public-alpha-foundation",
+    "observations": [
+      {"id":"name","text":"Elara Finch","boundingBox":{"x":0.08,"y":0.83,"width":0.34,"height":0.08},"confidence":0.97,"language":"en"},
+      {"id":"title","text":"Program Director","boundingBox":{"x":0.08,"y":0.72,"width":0.36,"height":0.05},"confidence":0.96,"language":"en"},
+      {"id":"organization","text":"Open Lantern Foundation","boundingBox":{"x":0.08,"y":0.58,"width":0.56,"height":0.07},"confidence":0.97,"language":"en"},
+      {"id":"email","text":"elara.finch@open-lantern.example","boundingBox":{"x":0.08,"y":0.22,"width":0.68,"height":0.04},"confidence":0.98,"language":"en"}
+    ],
+    "expected": {
+      "fullName": ["Elara Finch"],
+      "jobTitle": ["Program Director"],
+      "organization": ["Open Lantern Foundation"],
+      "emailAddresses": ["elara.finch@open-lantern.example"]
+    }
+  },
+  {
+    "identifier": "public-alpha-research-organization",
+    "observations": [
+      {"id":"name","text":"Theo Wren","boundingBox":{"x":0.08,"y":0.83,"width":0.30,"height":0.08},"confidence":0.97,"language":"en"},
+      {"id":"title","text":"Principal Scientist","boundingBox":{"x":0.08,"y":0.72,"width":0.40,"height":0.05},"confidence":0.96,"language":"en"},
+      {"id":"organization","text":"Imaginary Materials Research Institute","boundingBox":{"x":0.08,"y":0.58,"width":0.72,"height":0.07},"confidence":0.97,"language":"en"},
+      {"id":"email","text":"theo.wren@imaginary-materials.example","boundingBox":{"x":0.08,"y":0.22,"width":0.72,"height":0.04},"confidence":0.98,"language":"en"}
+    ],
+    "expected": {
+      "fullName": ["Theo Wren"],
+      "jobTitle": ["Principal Scientist"],
+      "organization": ["Imaginary Materials Research Institute"],
+      "emailAddresses": ["theo.wren@imaginary-materials.example"]
+    }
+  },
+  {
+    "identifier": "public-alpha-slogans-only",
+    "observations": [
+      {"id":"slogan-one","text":"Building the future together","boundingBox":{"x":0.10,"y":0.76,"width":0.68,"height":0.08},"confidence":0.96,"language":"en"},
+      {"id":"slogan-two","text":"Creating value for everyone","boundingBox":{"x":0.10,"y":0.58,"width":0.64,"height":0.06},"confidence":0.95,"language":"en"},
+      {"id":"slogan-three","text":"Together we imagine more!","boundingBox":{"x":0.10,"y":0.40,"width":0.60,"height":0.06},"confidence":0.94,"language":"en"}
+    ],
+    "expected": {}
+  },
+  {
+    "identifier": "public-alpha-multiple-country-addresses",
+    "observations": [
+      {"id":"name","text":"Celeste Harbor","boundingBox":{"x":0.07,"y":0.86,"width":0.38,"height":0.08},"confidence":0.97,"language":"en"},
+      {"id":"title","text":"Sales Director","boundingBox":{"x":0.07,"y":0.76,"width":0.34,"height":0.05},"confidence":0.96,"language":"en"},
+      {"id":"organization","text":"HARBORLIGHT PARTNERS","boundingBox":{"x":0.07,"y":0.65,"width":0.58,"height":0.07},"confidence":0.98,"language":"en"},
+      {"id":"canada-address","text":"42 Fictional Avenue, Toronto, ON A1A 1A1","boundingBox":{"x":0.07,"y":0.45,"width":0.76,"height":0.04},"confidence":0.95,"language":"en"},
+      {"id":"uk-address","text":"10 Example Road, London ZZ1 1ZZ","boundingBox":{"x":0.07,"y":0.34,"width":0.68,"height":0.04},"confidence":0.95,"language":"en"},
+      {"id":"korean-address","text":"서울특별시 예시구 가상로 7, 2층","boundingBox":{"x":0.07,"y":0.23,"width":0.70,"height":0.04},"confidence":0.94,"language":"ko"}
+    ],
+    "expected": {
+      "fullName": ["Celeste Harbor"],
+      "jobTitle": ["Sales Director"],
+      "organization": ["HARBORLIGHT PARTNERS"],
+      "addresses": [
+        "42 Fictional Avenue, Toronto, ON A1A 1A1",
+        "10 Example Road, London ZZ1 1ZZ",
+        "서울특별시 예시구 가상로 7, 2층"
+      ]
+    }
+  },
+  {
+    "identifier": "public-alpha-low-confidence-ambiguous",
+    "observations": [
+      {"id":"ambiguous","text":"River Stone","boundingBox":{"x":0.30,"y":0.48,"width":0.36,"height":0.03},"confidence":0.25,"language":"en"}
+    ],
+    "expected": {}
+  },
+  {
+    "identifier": "public-alpha-two-column-layout",
+    "observations": [
+      {"id":"name","text":"Sage Meridian","boundingBox":{"x":0.06,"y":0.80,"width":0.38,"height":0.09},"confidence":0.97,"language":"en"},
+      {"id":"email","text":"sage.meridian@meridian.example","boundingBox":{"x":0.54,"y":0.82,"width":0.42,"height":0.04},"confidence":0.98,"language":"en"},
+      {"id":"title","text":"Engineering Manager","boundingBox":{"x":0.06,"y":0.68,"width":0.40,"height":0.05},"confidence":0.96,"language":"en"},
+      {"id":"mobile","text":"M +1 202 555 0120","boundingBox":{"x":0.54,"y":0.68,"width":0.38,"height":0.04},"confidence":0.97,"language":"en"},
+      {"id":"organization","text":"MERIDIAN LABS","boundingBox":{"x":0.06,"y":0.55,"width":0.40,"height":0.07},"confidence":0.98,"language":"en"},
+      {"id":"website","text":"meridian.example","boundingBox":{"x":0.54,"y":0.55,"width":0.34,"height":0.04},"confidence":0.98,"language":"en"},
+      {"id":"address","text":"8 Example Street, Sample City 00000","boundingBox":{"x":0.06,"y":0.14,"width":0.72,"height":0.04},"confidence":0.95,"language":"en"}
+    ],
+    "expected": {
+      "fullName": ["Sage Meridian"],
+      "jobTitle": ["Engineering Manager"],
+      "organization": ["MERIDIAN LABS"],
+      "emailAddresses": ["sage.meridian@meridian.example"],
+      "mobilePhoneNumbers": ["+12025550120"],
+      "websites": ["meridian.example"],
+      "addresses": ["8 Example Street, Sample City 00000"]
+    }
+  },
+  {
+    "identifier": "public-alpha-department",
+    "observations": [
+      {"id":"name","text":"Indigo Reed","boundingBox":{"x":0.08,"y":0.84,"width":0.34,"height":0.08},"confidence":0.97,"language":"en"},
+      {"id":"title","text":"Senior Engineer","boundingBox":{"x":0.08,"y":0.73,"width":0.34,"height":0.05},"confidence":0.96,"language":"en"},
+      {"id":"department","text":"Research Department","boundingBox":{"x":0.08,"y":0.63,"width":0.42,"height":0.05},"confidence":0.96,"language":"en"},
+      {"id":"organization","text":"NIMBUS LABS","boundingBox":{"x":0.08,"y":0.50,"width":0.38,"height":0.07},"confidence":0.98,"language":"en"},
+      {"id":"email","text":"indigo.reed@nimbus.example","boundingBox":{"x":0.08,"y":0.21,"width":0.60,"height":0.04},"confidence":0.98,"language":"en"}
+    ],
+    "expected": {
+      "fullName": ["Indigo Reed"],
+      "jobTitle": ["Senior Engineer"],
+      "department": ["Research Department"],
+      "organization": ["NIMBUS LABS"],
+      "emailAddresses": ["indigo.reed@nimbus.example"]
+    }
+  },
+  {
+    "identifier": "public-alpha-multiple-email-addresses",
+    "observations": [
+      {"id":"name","text":"Piper Echo","boundingBox":{"x":0.08,"y":0.83,"width":0.32,"height":0.08},"confidence":0.97,"language":"en"},
+      {"id":"title","text":"Business Development Manager","boundingBox":{"x":0.08,"y":0.71,"width":0.52,"height":0.05},"confidence":0.96,"language":"en"},
+      {"id":"organization","text":"ECHOPOINT CORP","boundingBox":{"x":0.08,"y":0.58,"width":0.42,"height":0.07},"confidence":0.98,"language":"en"},
+      {"id":"work-email","text":"piper.echo@echopoint.example","boundingBox":{"x":0.08,"y":0.33,"width":0.60,"height":0.04},"confidence":0.98,"language":"en"},
+      {"id":"alias-email","text":"hello.piper@echopoint.example","boundingBox":{"x":0.08,"y":0.25,"width":0.60,"height":0.04},"confidence":0.97,"language":"en"},
+      {"id":"website","text":"echopoint.example","boundingBox":{"x":0.08,"y":0.17,"width":0.36,"height":0.04},"confidence":0.98,"language":"en"}
+    ],
+    "expected": {
+      "fullName": ["Piper Echo"],
+      "jobTitle": ["Business Development Manager"],
+      "organization": ["ECHOPOINT CORP"],
+      "emailAddresses": ["piper.echo@echopoint.example", "hello.piper@echopoint.example"],
+      "websites": ["echopoint.example"]
+    }
+  }
+]

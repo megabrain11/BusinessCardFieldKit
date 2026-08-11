@@ -1,0 +1,11 @@
+.build/
+.swiftpm/
+.DS_Store
+DerivedData/
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+local-corrections.json
+!Examples/Corrections/local-corrections.json
+*.business-card.jpg
+*.business-card.jpeg
+*.business-card.png

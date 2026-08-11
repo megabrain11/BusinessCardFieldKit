@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "1.0",
+  "identifier": "org.businesscardfieldkit.locale.ko-KR",
+  "version": "1.0.0",
+  "locale": "ko-KR",
+  "priority": 100,
+  "organizationSuffixes": ["사단법인", "학교법인", "의료원"],
+  "organizationTerms": ["국립", "시청", "도청"],
+  "jobTitles": ["본부장", "국장", "원장", "박사"],
+  "departmentTerms": ["본부", "사업부", "연구실"],
+  "phoneLabels": {"휴대전화":"mobile", "대표전화":"work", "직통전화":"work"},
+  "addressTerms": ["특별시", "광역시", "도", "시"],
+  "sloganTerms": ["세상을 바꾸는", "새로운 내일"]
+}

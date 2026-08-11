@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "1.0",
+  "identifier": "org.businesscardfieldkit.industry.research",
+  "version": "1.0.0",
+  "industry": "research",
+  "priority": 200,
+  "organizationSuffixes": ["observatory", "consortium"],
+  "organizationTerms": ["academy of sciences"],
+  "jobTitles": ["postdoctoral fellow", "principal investigator"],
+  "departmentTerms": ["computational biology", "materials science"],
+  "phoneLabels": {},
+  "addressTerms": ["campus"],
+  "sloganTerms": []
+}

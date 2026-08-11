@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/megabrain11/BusinessCardFieldKit/main/Schemas/contribution-draft.schema.json",
+  "title": "Sanitized BusinessCardFieldKit Contribution Draft",
+  "type": "object",
+  "required": ["schemaVersion", "tokens", "corrections", "warnings"],
+  "properties": {
+    "schemaVersion": {"const": "1.0"},
+    "tokens": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["placeholder", "boundingBox", "confidenceBucket"],
+        "properties": {
+          "placeholder": {"pattern": "^<[A-Z_]+>$"},
+          "boundingBox": {"type": "object"},
+          "confidenceBucket": {"enum": ["low", "medium", "high"]},
+          "language": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "corrections": {"type": "array", "items": {"type": "object"}},
+    "warnings": {"type": "array", "items": {"type": "string"}}
+  },
+  "additionalProperties": false
+}

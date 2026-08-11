@@ -1,0 +1,19 @@
+[
+  {
+    "id": "fictional-domain-map",
+    "kind": "emailDomainOrganization",
+    "match": "fictional.example",
+    "replacement": "Fictional Cooperative"
+  },
+  {
+    "id": "local-title-vocabulary",
+    "kind": "customJobTitle",
+    "match": "Wayfinder"
+  },
+  {
+    "id": "compact-phone-label",
+    "kind": "phoneLabelInterpretation",
+    "match": "P",
+    "phoneKind": "mobile"
+  }
+]

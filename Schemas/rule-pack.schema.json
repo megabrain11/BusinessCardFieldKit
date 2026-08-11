@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/megabrain11/BusinessCardFieldKit/main/Schemas/rule-pack.schema.json",
+  "title": "BusinessCardFieldKit Rule Pack",
+  "type": "object",
+  "required": ["schemaVersion", "identifier", "version", "priority"],
+  "properties": {
+    "schemaVersion": {"const": "1.0"},
+    "identifier": {"type": "string", "minLength": 3},
+    "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+    "locale": {"type": "string"},
+    "industry": {"type": "string"},
+    "priority": {"type": "integer"},
+    "organizationSuffixes": {"type": "array", "items": {"type": "string"}},
+    "organizationTerms": {"type": "array", "items": {"type": "string"}},
+    "jobTitles": {"type": "array", "items": {"type": "string"}},
+    "departmentTerms": {"type": "array", "items": {"type": "string"}},
+    "phoneLabels": {"type": "object", "additionalProperties": {"enum": ["mobile", "work", "fax"]}},
+    "addressTerms": {"type": "array", "items": {"type": "string"}},
+    "sloganTerms": {"type": "array", "items": {"type": "string"}}
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,43 @@
+[
+  {
+    "identifier": "fictional-korean-card",
+    "observations": [
+      {"id":"ko-name","text":"김민서","boundingBox":{"x":0.10,"y":0.80,"width":0.30,"height":0.09},"confidence":0.97,"language":"ko"},
+      {"id":"ko-title","text":"제품 팀장","boundingBox":{"x":0.10,"y":0.68,"width":0.30,"height":0.05},"confidence":0.95,"language":"ko"},
+      {"id":"ko-org","text":"새봄 연구소","boundingBox":{"x":0.10,"y":0.56,"width":0.45,"height":0.06},"confidence":0.96,"language":"ko"},
+      {"id":"ko-email","text":"minseo.kim@saebom.example","boundingBox":{"x":0.10,"y":0.25,"width":0.60,"height":0.04},"confidence":0.98,"language":"en"}
+    ],
+    "expected": {
+      "fullName": ["김민서"],
+      "jobTitle": ["제품 팀장"],
+      "organization": ["새봄 연구소"],
+      "emailAddresses": ["minseo.kim@saebom.example"]
+    }
+  },
+  {
+    "identifier": "fictional-international-card",
+    "observations": [
+      {"id":"name","text":"María Fernanda de la Vega-Santos","boundingBox":{"x":0.08,"y":0.81,"width":0.62,"height":0.09},"confidence":0.96,"language":"es"},
+      {"id":"title","text":"Research Director","boundingBox":{"x":0.08,"y":0.69,"width":0.40,"height":0.05},"confidence":0.95,"language":"en"},
+      {"id":"org","text":"NORTHSTAR FOUNDATION","boundingBox":{"x":0.08,"y":0.56,"width":0.56,"height":0.07},"confidence":0.98,"language":"en"},
+      {"id":"phone","text":"M +1 202 555 0101","boundingBox":{"x":0.08,"y":0.25,"width":0.40,"height":0.04},"confidence":0.96,"language":"en"}
+    ],
+    "expected": {
+      "fullName": ["María Fernanda de la Vega-Santos"],
+      "jobTitle": ["Research Director"],
+      "organization": ["NORTHSTAR FOUNDATION"],
+      "mobilePhoneNumbers": ["+12025550101"]
+    }
+  },
+  {
+    "identifier": "organization-only-card",
+    "observations": [
+      {"id":"org","text":"NATIONAL RESEARCH INSTITUTE","boundingBox":{"x":0.12,"y":0.75,"width":0.70,"height":0.10},"confidence":0.97,"language":"en"},
+      {"id":"site","text":"research.example","boundingBox":{"x":0.12,"y":0.20,"width":0.40,"height":0.04},"confidence":0.96,"language":"en"}
+    ],
+    "expected": {
+      "organization": ["NATIONAL RESEARCH INSTITUTE"],
+      "websites": ["research.example"]
+    }
+  }
+]
