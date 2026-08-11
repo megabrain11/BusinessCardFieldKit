@@ -559,10 +559,12 @@ import Foundation
 
     var area: Double {
       let points = [bottomLeft, bottomRight, topRight, topLeft]
-      let twiceArea = zip(points, points.dropFirst() + [points[0]]).reduce(0.0) {
-        partialResult, pair in
-        partialResult
-          + Double(pair.0.x * pair.1.y - pair.1.x * pair.0.y)
+      var twiceArea = 0.0
+      for index in points.indices {
+        let current = points[index]
+        let next = points[(index + 1) % points.count]
+        let crossProduct = current.x * next.y - next.x * current.y
+        twiceArea += Double(crossProduct)
       }
       return abs(twiceArea) / 2
     }
