@@ -1,6 +1,11 @@
 #!/bin/sh
 set -eu
 
+if ! command -v rg >/dev/null 2>&1; then
+    echo "ripgrep (rg) is required for credential scanning." >&2
+    exit 1
+fi
+
 swift format lint --recursive --strict Sources Tests Package.swift
 swift build
 swift test
