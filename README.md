@@ -14,7 +14,7 @@ Phase 1 is a pure Swift Package. `CardFieldCore` has no dependency on UIKit, Swi
 - Sanitized structural contribution drafts with no automatic upload
 - Language-neutral JSON contracts and rule-pack schemas
 - Synthetic evaluation fixtures and a field-level precision/recall CLI
-- An optional local Apple Vision scanner with automatic foreground-card isolation, perspective correction, and conservative fallback
+- An optional local Apple Vision scanner with foreground-card isolation, saliency fallback, perspective correction at enforced output resolution, image enhancement (upscale, grayscale, contrast, sharpening), dual-pass recognition that shields emails and phones from language correction, multi-candidate readings, targeted low-confidence re-recognition, script-based token languages, a pinned Vision revision, async APIs, and conservative full-image fallback
 
 ## Coordinate contract
 
@@ -82,8 +82,8 @@ For a complete integration walkthrough, see the [CardFieldCore DocC catalog](Sou
 
 ## Package products
 
-- `CardFieldCore`: contracts, normalization, rules, classification, confidence, evidence, corrections, and sanitization
-- `AppleVisionAdapter`: locally recognizes a front image with Vision, converts observations into core tokens, and classifies them
+- `CardFieldCore`: contracts, normalization, rules, classification, confidence, evidence, corrections, sanitization, layout grouping, and script-based language inference
+- `AppleVisionAdapter`: locally enhances and recognizes a front image with Vision, converts observations into core tokens with alternative readings, and classifies them
 - `CardFieldEvaluation`: decodes synthetic fixtures and reports field-level precision and recall
 - `card-field-eval`: command-line fixture runner
 - `card-field-scan`: local Apple-platform image scanner that emits structured JSON
@@ -122,6 +122,7 @@ A CRM such as Relationship Memory can reuse the public interpretation contracts,
 
 - [Architecture](ARCHITECTURE.md)
 - [Local image scanning](Docs/IMAGE_SCANNING.md)
+- [AI collaboration handoff](Docs/AI_COLLABORATION.md)
 - [Roadmap](ROADMAP.md)
 - [Changelog](CHANGELOG.md)
 - [Support policy](SUPPORT.md)

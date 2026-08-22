@@ -2,16 +2,37 @@
 
 `card-field-scan` is a local Apple-platform command for testing the complete image-to-fields
 pipeline. It reads each explicitly supplied image, isolates one likely foreground business card,
-runs Apple Vision OCR, classifies the recognized text, and writes JSON to standard output.
+enhances it locally, runs Apple Vision OCR, classifies the recognized text, and writes JSON to
+standard output.
 
 ```sh
 swift run card-field-scan ./card-front.jpg
 swift run card-field-scan --language ko-KR --language en-US ./cards/*.jpg
+swift run card-field-scan --no-dual-pass --include-tokens ./card-front.jpg
 ```
 
 The command does not copy images, save results, log OCR text, or make network requests. Shell
 redirection is an explicit host or user decision. Output contains structured fields by default;
 raw OCR tokens appear only with `--include-tokens`.
+
+## Recognition pipeline
+
+For every image the adapter runs the following local stages. Each stage can be disabled without
+affecting the others:
+
+1. **Enhancement** — small images are upscaled to a minimum long edge, converted to grayscale,
+   contrast-adjusted, and sharpened before recognition (`--no-preprocess` skips this).
+2. **Foreground-card isolation** — plausible quadrilaterals are detected, perspective-corrected at
+   a minimum output resolution, and gated by contact-text evidence. Attention-saliency proposes a
+   candidate when rectangle detection finds nothing.
+3. **Dual-pass recognition** — each region is read twice, with and without Vision language
+   correction. Emails, phones, and URLs keep the uncorrected reading; prose keeps the corrected
+   one; both readings survive as `alternatives` on each token (`--no-dual-pass` runs one pass).
+4. **Targeted re-recognition** — lines below the confidence limit are re-read from an upscaled crop
+   of the source region and replaced only when the second reading is stronger
+   (`--no-re-recognize` skips this).
+5. **Script-based language tags** — tokens without a host hint receive a best-effort BCP 47 tag
+   inferred from Unicode ranges (`--no-language-inference` leaves languages unset).
 
 ## Foreground-card isolation
 

@@ -27,17 +27,24 @@ Synthetic fixtures -> CardFieldEvaluation -> precision/recall report
 
 ### CardFieldCore
 
-The core defines provider-neutral contracts, OCR normalization, typed extraction, candidate ranking, confidence, evidence, additive rule packs, correction overlays, and contribution sanitization. Foundation is used for Unicode, regular expressions, coding, locks, and optional local JSON reads. There is no implicit file access: only a host-created `LocalJSONCorrectionStore` reads its explicit URL.
+The core defines provider-neutral contracts, OCR normalization, typed extraction, candidate ranking, confidence, evidence, additive rule packs, correction overlays, and contribution sanitization. It also exposes two provider-neutral utilities: `LayoutAnalyzer` groups tokens into deterministic visual rows and columns for hosts reasoning about multi-column cards, and `TokenLanguageInference` labels tokens with a best-effort BCP 47 tag derived from Unicode script ranges. Foundation is used for Unicode, regular expressions, coding, locks, and optional local JSON reads. There is no implicit file access: only a host-created `LocalJSONCorrectionStore` reads its explicit URL.
 
 ### AppleVisionAdapter
 
-The optional adapter validates encoded image data and resolves explicit or EXIF orientation. By default, it asks Vision for a bounded set of plausible card quadrilaterals, ranks them using geometry plus contact-text evidence, perspective-corrects the strongest candidates, and recognizes the selected region. When no candidate clears the evidence threshold, it recognizes the complete upright image instead. The result reports whether selection was `isolated`, `fullImageFallback`, or `disabled`, including source-image region metadata for an isolated card.
+The optional adapter validates encoded image data and resolves explicit or EXIF orientation. The scan pipeline then runs entirely on one upright working image:
 
-The adapter converts `VNRecognizedTextObservation` values to `OCRToken` and invokes a host-configurable `CardFieldClassifier`. The target contains all Apple Vision, Core Image, ImageIO, and Core Graphics imports. It does not access a camera, retain an image, persist output, or use the network. Existing Vision observations can still be converted without running another request.
+1. Local Core Image enhancement upscales small sources to a configured long edge and applies grayscale, contrast, and unsharp-mask stages (`AppleVisionPreprocessingConfiguration`).
+2. A `VNRecognizeTextRequest` pinned to a configured revision reads each region. When dual-pass mode is enabled, a second request with the opposite language-correction flag runs as well; readings merge geometrically so emails, phone numbers, and URLs keep the raw text while prose keeps corrected text. Up to `candidateCount` Vision readings per line survive as `OCRToken.alternatives`.
+3. Lines at or below the targeted-re-recognition confidence limit are re-read from an upscaled crop of their source region and replaced only when the second reading is stronger.
+4. Tokens without a host language hint receive script-based tags from `TokenLanguageInference`.
+
+By default, the adapter first asks Vision for a bounded set of plausible card quadrilaterals, ranks them using geometry plus contact-text evidence, perspective-corrects the strongest candidates to a minimum output resolution, and recognizes each selected region. When rectangle detection finds nothing and saliency fallback is enabled, attention-based saliency proposes one card-shaped candidate subject to the same evidence gate. When no candidate clears that gate, the adapter recognizes the complete upright image instead. The result reports whether selection was `isolated`, `fullImageFallback`, or `disabled`, including source-image region metadata for an isolated card.
+
+Synchronous `scan` methods and async `scanAsync` variants run the same local path; async forms execute on a background task so callers never block an actor. The target contains all Apple Vision, Core Image, ImageIO, and Core Graphics imports. A process-wide shared `CIContext` keeps batch scans affordable. The adapter does not access a camera, retain an image, persist output, or use the network. Existing Vision observations can still be converted without running another request.
 
 ### card-field-scan
 
-The Apple-platform CLI exercises the adapter without adding storage behavior. It reads only paths explicitly supplied by the caller and writes JSON to standard output. Structured fields are the default; raw OCR tokens require `--include-tokens`. The scanner isolates one card rather than enumerating every card in a scene. See [Local Image Scanning](Docs/IMAGE_SCANNING.md).
+The Apple-platform CLI exercises the adapter without adding storage behavior. It reads only paths explicitly supplied by the caller and writes JSON to standard output. Structured fields are the default; raw OCR tokens require `--include-tokens`. Pipeline stages can be disabled individually (`--no-preprocess`, `--no-dual-pass`, `--no-re-recognize`, `--no-language-inference`). The scanner isolates one card rather than enumerating every card in a scene. See [Local Image Scanning](Docs/IMAGE_SCANNING.md).
 
 ### CardFieldEvaluation
 
@@ -53,7 +60,7 @@ The evaluation module compares normalized field values in synthetic fixtures. Fo
 - Evidence and warnings use stable lexical ordering.
 - No clock, randomness, model service, locale-global state, or network response affects classification.
 
-The same token input, package version, rule-pack versions, and correction set therefore produce the same core result. Image-to-text output from Apple Vision may differ across operating-system and Vision revisions; that provider behavior is outside the core determinism guarantee.
+The same token input, package version, rule-pack versions, and correction set therefore produce the same core result. Image-to-text output from Apple Vision may differ across operating-system and Vision revisions; the adapter pins the text-recognition revision by default to reduce that variance, but provider-level behavior remains outside the core determinism guarantee.
 
 ## Rule layers
 
