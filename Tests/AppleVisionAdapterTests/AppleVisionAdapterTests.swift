@@ -64,6 +64,23 @@ import Testing
     #expect(request.minimumTextHeight == 1)
   }
 
+  @Test("Recognition revisions are clamped to the supported 1...3 range")
+  func recognitionRevisionClamping() {
+    let low = AppleVisionScanner.makeRequest(
+      configuration: AppleVisionScanConfiguration(recognitionRevision: -2)
+    )
+    let high = AppleVisionScanner.makeRequest(
+      configuration: AppleVisionScanConfiguration(recognitionRevision: 99)
+    )
+    let pinned = AppleVisionScanner.makeRequest(
+      configuration: AppleVisionScanConfiguration(recognitionRevision: 2)
+    )
+
+    #expect(low.revision == 1)
+    #expect(high.revision == 3)
+    #expect(pinned.revision == 2)
+  }
+
   @Test("Card-region configuration clamps public limits and configures rectangle detection")
   func cardRegionRequestConfiguration() {
     let configuration = AppleVisionCardRegionConfiguration(
