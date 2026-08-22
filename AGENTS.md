@@ -31,6 +31,8 @@ swift run card-field-eval Fixtures/Synthetic/public-alpha.json   # fixture eval
 swift run card-field-scan --help                            # CLI smoke test
 ```
 
+`Scripts/check-repository.sh` additionally requires [ripgrep](https://github.com/BurntSushi/ripgrep) (`rg`) for its credential scan and fails fast when it is missing.
+
 - Swift tools 6.0 (strict concurrency ON), platforms macOS 13+ / iOS 17+.
 - Tests run on macOS only for adapter targets; core tests are cross-platform.
 - Vision-dependent E2E tests render synthetic cards with Core Text — keep fixtures fictional and deterministic.

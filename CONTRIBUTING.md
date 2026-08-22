@@ -16,7 +16,7 @@ Submissions that contain personal data will be removed from consideration and ma
 
 ## Development
 
-Requirements: Swift 6.0 or later on a supported Apple platform.
+Requirements: Swift 6.0 or later on a supported Apple platform, plus [ripgrep](https://github.com/BurntSushi/ripgrep) (`rg`) for the credential scan in `Scripts/check-repository.sh`.
 
 ```sh
 swift build
@@ -25,7 +25,7 @@ swift format lint --recursive --strict Sources Tests Package.swift
 swift run card-field-eval Fixtures/Synthetic/phase1.json
 ```
 
-Run `Scripts/check-repository.sh` for the complete local check.
+Run `Scripts/check-repository.sh` for the complete local check. The script fails fast with a clear message when `rg` is missing.
 
 ## Rules and fixtures
 
