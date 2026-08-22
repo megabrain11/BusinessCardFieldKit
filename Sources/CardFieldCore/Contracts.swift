@@ -24,25 +24,45 @@ public struct NormalizedBoundingBox: Codable, Equatable, Sendable {
 }
 
 /// One OCR observation from the front of a card. The core never accepts card images.
+///
+/// `alternatives` carries lower-ranked provider readings for the same region. It is
+/// additive metadata: classification only consumes `text`.
 public struct OCRToken: Codable, Equatable, Sendable, Identifiable {
   public var id: String
   public var text: String
   public var boundingBox: NormalizedBoundingBox
   public var confidence: Double
   public var language: String?
+  public var alternatives: [String]
 
   public init(
     id: String = "",
     text: String,
     boundingBox: NormalizedBoundingBox,
     confidence: Double,
-    language: String? = nil
+    language: String? = nil,
+    alternatives: [String] = []
   ) {
     self.id = id
     self.text = text
     self.boundingBox = boundingBox
     self.confidence = confidence
     self.language = language
+    self.alternatives = alternatives
+  }
+
+  private enum CodingKeys: String, CodingKey {
+    case id, text, boundingBox, confidence, language, alternatives
+  }
+
+  public init(from decoder: any Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    id = try container.decode(String.self, forKey: .id)
+    text = try container.decode(String.self, forKey: .text)
+    boundingBox = try container.decode(NormalizedBoundingBox.self, forKey: .boundingBox)
+    confidence = try container.decode(Double.self, forKey: .confidence)
+    language = try container.decodeIfPresent(String.self, forKey: .language)
+    alternatives = try container.decodeIfPresent([String].self, forKey: .alternatives) ?? []
   }
 }
 
