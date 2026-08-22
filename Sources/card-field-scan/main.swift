@@ -7,6 +7,10 @@ import Foundation
     var recognitionLevel: AppleVisionScanConfiguration.RecognitionLevel = .accurate
     var languages = ["ko-KR", "en-US"]
     var isolatesCardRegion = true
+    var enablesPreprocessing = true
+    var enablesDualPass = true
+    var enablesTargetedReRecognition = true
+    var infersTokenLanguages = true
     var includesTokens = false
     var prettyPrinted = true
     var paths: [String] = []
@@ -75,6 +79,10 @@ import Foundation
       --language <BCP-47>     Add an OCR language hint (repeatable).
       --fast                  Use fast rather than accurate text recognition.
       --no-card-isolation     OCR the complete image without foreground-card detection.
+      --no-preprocess         Skip upscale, grayscale, and sharpening enhancement.
+      --no-dual-pass          Recognize once instead of corrected plus uncorrected passes.
+      --no-re-recognize       Skip upscaled re-recognition of low-confidence lines.
+      --no-language-inference Leave token language unset instead of inferring from script.
       --include-tokens        Include raw OCR text and geometry in JSON output.
       --compact               Emit compact rather than pretty-printed JSON.
       -h, --help              Show this help.
@@ -119,6 +127,14 @@ import Foundation
         options.recognitionLevel = .fast
       } else if acceptsOptions, argument == "--no-card-isolation" {
         options.isolatesCardRegion = false
+      } else if acceptsOptions, argument == "--no-preprocess" {
+        options.enablesPreprocessing = false
+      } else if acceptsOptions, argument == "--no-dual-pass" {
+        options.enablesDualPass = false
+      } else if acceptsOptions, argument == "--no-re-recognize" {
+        options.enablesTargetedReRecognition = false
+      } else if acceptsOptions, argument == "--no-language-inference" {
+        options.infersTokenLanguages = false
       } else if acceptsOptions, argument == "--include-tokens" {
         options.includesTokens = true
       } else if acceptsOptions, argument == "--compact" {
@@ -150,6 +166,8 @@ import Foundation
 
     let regionMode: AppleVisionCardRegionConfiguration.Mode =
       options.isolatesCardRegion ? .automatic : .disabled
+    var preprocessing = AppleVisionPreprocessingConfiguration()
+    preprocessing.isEnabled = options.enablesPreprocessing
     let scanner = AppleVisionScanner(
       configuration: AppleVisionScanConfiguration(
         recognitionLevel: options.recognitionLevel,
@@ -157,7 +175,11 @@ import Foundation
         automaticallyDetectsLanguage: true,
         usesLanguageCorrection: true,
         minimumTextHeight: 0.005,
-        cardRegion: AppleVisionCardRegionConfiguration(mode: regionMode)
+        cardRegion: AppleVisionCardRegionConfiguration(mode: regionMode),
+        preprocessing: preprocessing,
+        dualPassRecognition: options.enablesDualPass,
+        performsTargetedReRecognition: options.enablesTargetedReRecognition,
+        infersTokenLanguages: options.infersTokenLanguages
       )
     )
 
