@@ -249,6 +249,25 @@ import Foundation
     }
   }
 
+  /// Provider-neutral OCR tokens produced from one image, without business-card
+  /// field classification.
+  ///
+  /// General document hosts consume `tokens` and own any downstream
+  /// interpretation, review, or storage. No `CardFieldClassifier` runs on this
+  /// path, so `.classificationFailed` never originates from a token scan.
+  public struct AppleVisionTokenScanResult: Equatable, Sendable {
+    public var tokens: [OCRToken]
+    public var cardRegionSelection: AppleVisionCardRegionSelection
+
+    public init(
+      tokens: [OCRToken],
+      cardRegionSelection: AppleVisionCardRegionSelection
+    ) {
+      self.tokens = tokens
+      self.cardRegionSelection = cardRegionSelection
+    }
+  }
+
   /// Stable failure categories for the image-to-fields scan pipeline.
   public enum AppleVisionScanError: Error, Equatable, Sendable {
     /// The supplied bytes do not contain a decodable image.
@@ -279,10 +298,12 @@ import Foundation
     }
   }
 
-  /// Runs Apple Vision locally and classifies the recognized front-side text.
+  /// Runs Apple Vision locally and emits recognized text either with business-card
+  /// field suggestions (`scan`) or as provider-neutral tokens (`scanTokens`).
   ///
-  /// `scan` is synchronous. Hosts should call it away from latency-sensitive UI work.
-  /// The scanner does not retain the image, persist results, or perform network requests.
+  /// Both paths are synchronous; hosts should call them away from latency-sensitive
+  /// UI work. The scanner does not retain the image, persist results, or perform
+  /// network requests.
   public struct AppleVisionScanner: Sendable {
     public var configuration: AppleVisionScanConfiguration
 
@@ -301,16 +322,8 @@ import Foundation
       imageData: Data,
       orientation: CGImagePropertyOrientation? = nil
     ) throws -> AppleVisionScanResult {
-      guard
-        let source = CGImageSourceCreateWithData(imageData as CFData, nil),
-        CGImageSourceGetCount(source) > 0,
-        let image = CGImageSourceCreateImageAtIndex(source, 0, nil)
-      else {
-        throw AppleVisionScanError.invalidImageData
-      }
-
-      let resolvedOrientation = orientation ?? Self.orientation(from: source)
-      return try scanImage(image, orientation: resolvedOrientation)
+      let decoded = try Self.decodedImage(imageData)
+      return try scanImage(decoded.image, orientation: orientation ?? decoded.exifOrientation)
     }
 
     /// Scans a decoded image. `orientation` describes how its pixels must rotate to become upright.
@@ -321,26 +334,83 @@ import Foundation
       try scanImage(cgImage, orientation: orientation)
     }
 
+    /// Recognizes encoded image bytes as provider-neutral tokens without field classification.
+    ///
+    /// Shares the identical pipeline with `scan(imageData:)` up through token
+    /// production — enhancement, optional card isolation, dual-pass recognition,
+    /// targeted re-recognition, and language inference — then returns without
+    /// invoking `CardFieldClassifier`.
+    public func scanTokens(
+      imageData: Data,
+      orientation: CGImagePropertyOrientation? = nil
+    ) throws -> AppleVisionTokenScanResult {
+      let decoded = try Self.decodedImage(imageData)
+      return try performTokenRecognition(
+        decoded.image,
+        orientation: orientation ?? decoded.exifOrientation
+      )
+    }
+
+    /// Recognizes a decoded image as provider-neutral tokens without field classification.
+    public func scanTokens(
+      cgImage: CGImage,
+      orientation: CGImagePropertyOrientation = .up
+    ) throws -> AppleVisionTokenScanResult {
+      try performTokenRecognition(cgImage, orientation: orientation)
+    }
+
+    private static func decodedImage(_ data: Data) throws -> (
+      image: CGImage,
+      exifOrientation: CGImagePropertyOrientation
+    ) {
+      guard
+        let source = CGImageSourceCreateWithData(data as CFData, nil),
+        CGImageSourceGetCount(source) > 0,
+        let image = CGImageSourceCreateImageAtIndex(source, 0, nil)
+      else {
+        throw AppleVisionScanError.invalidImageData
+      }
+      return (image, orientation(from: source))
+    }
+
     private func scanImage(
       _ image: CGImage,
       orientation: CGImagePropertyOrientation
     ) throws -> AppleVisionScanResult {
+      let tokens = try performTokenRecognition(image, orientation: orientation)
+      return try makeResult(
+        from: tokens.tokens,
+        cardRegionSelection: tokens.cardRegionSelection
+      )
+    }
+
+    /// Generic OCR path shared by `scan` and `scanTokens`: enhancement, card-region
+    /// handling, recognition, merging, refinement, and language tags.
+    private func performTokenRecognition(
+      _ image: CGImage,
+      orientation: CGImagePropertyOrientation
+    ) throws -> AppleVisionTokenScanResult {
       let working = preparedWorkingImage(image, orientation: orientation)
 
+      var tokens: [OCRToken]
+      var selection: AppleVisionCardRegionSelection
       if configuration.cardRegion.mode == .automatic,
         let isolatedResult = isolatedCardResult(from: working)
       {
-        return try makeResult(
-          from: isolatedResult.tokens,
-          cardRegionSelection: .isolated(isolatedResult.region)
-        )
+        tokens = isolatedResult.tokens
+        selection = .isolated(isolatedResult.region)
+      } else {
+        var recognized = try recognizeTokens(in: working, orientation: .up)
+        recognized = refineLowConfidenceTokens(recognized, in: working)
+        tokens = recognized
+        selection =
+          configuration.cardRegion.mode == .disabled ? .disabled : .fullImageFallback
       }
 
-      var tokens = try recognizeTokens(in: working, orientation: .up)
-      tokens = refineLowConfidenceTokens(tokens, in: working)
-      let selection: AppleVisionCardRegionSelection =
-        configuration.cardRegion.mode == .disabled ? .disabled : .fullImageFallback
-      return try makeResult(from: tokens, cardRegionSelection: selection)
+      guard !tokens.isEmpty else {
+        throw AppleVisionScanError.noRecognizedText
+      }
+      return AppleVisionTokenScanResult(tokens: tokens, cardRegionSelection: selection)
     }
 
     /// Produces one upright, enhanced image shared by detection, recognition, and crops.
@@ -1379,6 +1449,34 @@ import Foundation
       let boxed = ImmutableCGImage(cgImage)
       let task = Task.detached(priority: .userInitiated) {
         try self.scan(cgImage: boxed.value, orientation: orientation)
+      }
+      return try await task.value
+    }
+
+    /// Asynchronously recognizes encoded image bytes on a background task without
+    /// classification.
+    ///
+    /// Equivalent to the synchronous `scanTokens(imageData:)`, but never blocks
+    /// the calling actor.
+    public func scanTokensAsync(
+      imageData: Data,
+      orientation: CGImagePropertyOrientation? = nil
+    ) async throws -> AppleVisionTokenScanResult {
+      let task = Task.detached(priority: .userInitiated) {
+        try self.scanTokens(imageData: imageData, orientation: orientation)
+      }
+      return try await task.value
+    }
+
+    /// Asynchronously recognizes a decoded image on a background task without
+    /// classification.
+    public func scanTokensAsync(
+      cgImage: CGImage,
+      orientation: CGImagePropertyOrientation = .up
+    ) async throws -> AppleVisionTokenScanResult {
+      let boxed = ImmutableCGImage(cgImage)
+      let task = Task.detached(priority: .userInitiated) {
+        try self.scanTokens(cgImage: boxed.value, orientation: orientation)
       }
       return try await task.value
     }

@@ -2,6 +2,62 @@
 
 Living document for humans and AI agents (Codex, Claude Code, others). Update the relevant section when you finish significant work. Newest entries at the top.
 
+## Session 2026-08-23 — Build restored + generic token-only scanTokens API (completed)
+
+Goal: unblock the SwiftPM build broken by a duplicated adapter file, then expose the existing OCR pipeline as a generic token-only API for non-card documents (a future AnswerSheetFieldKit can consume it). No commits or pushes.
+
+### Duplicate file resolution and recovery path
+
+`Sources/AppleVisionAdapter/AppleVisionAdapter 2.swift` (untracked, 52,370 B, mtime 2026-08-22 13:53, SHA-256 `5597bff1de12c2a9d9478e8af71f912035d6733fd503bd695223f73d64ae3c44`) shadowed the tracked implementation with an older snapshot missing `refinedForTesting`, the `nonisolated(unsafe)` regex statics, the perspective-correction top-up fix, and format normalization — tests reference `refinedForTesting`, so the tracked file was judged canonical. The duplicate was **moved (not deleted)** to `/Users/yoon/Documents/BusinessCardFieldKit-backups/AppleVisionAdapter 2.swift` (checksum verified identical after move). Restore with: `mv "/Users/yoon/Documents/BusinessCardFieldKit-backups/AppleVisionAdapter 2.swift" "Sources/AppleVisionAdapter/AppleVisionAdapter 2.swift"` — but do not: it reintroduces ambiguous-type build failures while both files exist in the target directory.
+
+### What changed
+
+1. **Build normalized**: moving the stale duplicate out fixed the `invalid redeclaration` errors; baseline restored at 87 passing tests before any feature work.
+2. **Additive public contract**: `AppleVisionTokenScanResult { tokens: [OCRToken], cardRegionSelection }` — provider-neutral tokens without field classification.
+3. **New APIs on `AppleVisionScanner`**: `scanTokens(imageData:orientation:)`, `scanTokens(cgImage:orientation:)`, plus `scanTokensAsync` variants on detached background tasks.
+4. **Shared pipeline, zero duplication**: `scan` now routes through the same internal `performTokenRecognition` path as `scanTokens`; classification (`makeResult` → `CardFieldClassifier.classify`) happens only afterwards. Token production, card-region selection, dual-pass merging, targeted re-recognition, and language inference run exactly once per call. `.noRecognizedText` now throws from the shared path (same point in the flow as before).
+5. **Tests**: new `Tests/AppleVisionAdapterTests/TokenScanTests.swift` (8 tests, 95 total) covering invariants (non-empty text, confidence range, unit-square boxes), stable positional ids, sync/async parity, repeated-run stability, `scan.tokens == scanTokens.tokens`, CardFieldResult regression guard, independence from classifier failures (failing `CorrectionStore`: `scan` throws `.classificationFailed` while `scanTokens` succeeds), automatic-region isolation via token scanning, full metadata preservation incl. alternatives, legacy JSON decoding, and Vision E2E over synthetic fictional pages.
+6. **Docs**: OCR_ADAPTERS.md gained a "Token-only scanning for other documents" section (scan vs. scanTokens table, `cardRegion .disabled` guidance for non-card consumers, host-owned review/storage responsibility, no-persistence/no-network guarantees, fictional-fixture rule). ARCHITECTURE.md mentions the generic entry point.
+
+### Compatibility
+
+No existing public API changed signature or semantics; Relationship Memory and all current callers compile unchanged (87 pre-existing tests pass untouched). `scanTokens` never calls `CardFieldClassifier`, so it cannot emit `.classificationFailed`.
+
+### Commands executed (all passing)
+
+```sh
+swift build
+swift test                       # 95 passed
+swift run card-field-eval Fixtures/Synthetic/public-alpha.json   # FP/FN = 0 on every field (26 fixtures)
+swift run card-field-eval Fixtures/Synthetic/phase1.json         # exit 0
+swift run card-field-scan --help # flags listed
+swift format lint --recursive --strict Sources Tests Package.swift
+docc convert (warnings-as-errors) # pass
+git diff --check                 # clean
+```
+
+### Remaining risks / notes
+
+- `Scripts/check-repository.sh` could not run as-is: ripgrep is absent on this machine and the script fails fast by design. Every step was executed individually instead, with `grep -rEn '(AKIA[0-9A-Z]{16}|-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----)'` as the credential-scan equivalent (no matches). Installing rg restores one-command verification.
+- E2E token tests render fictional content only ("Practice Worksheet", "Alex Kim", `example.com`, 555 numbers); Hangul rendering relies on Core Text font fallback and assertions are invariant-based, not glyph-exact.
+- Provider-level OCR variance across OS/Vision revisions applies to `scanTokens` equally to `scan`.
+
+### Recommended configuration for AnswerSheetFieldKit (future consumer)
+
+```swift
+AppleVisionScanConfiguration(
+  recognitionLanguages: ["ko-KR", "en-US"],
+  automaticallyDetectsLanguage: true,
+  cardRegion: AppleVisionCardRegionConfiguration(mode: .disabled),
+  preprocessing: AppleVisionPreprocessingConfiguration(),       // enabled
+  dualPassRecognition: true,
+  performsTargetedReRecognition: true
+)
+// then scanner.scanTokens(imageData:) / scanTokensAsync(...)
+```
+
+This exact configuration is exercised by `TokenScanTests.scanTokensInvariants`. Keep AnswerSheet-specific parsing out of this package; consume `OCRToken` from outside.
+
 ## Session 2026-08-22 — Pre-publication verification & audit (completed)
 
 Goal: make the uncommitted OCR improvements GitHub-ready. No commits or pushes were made in this session; results and a suggested commit split are recorded for the maintainer.
