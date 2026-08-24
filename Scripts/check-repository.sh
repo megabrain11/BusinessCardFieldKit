@@ -8,7 +8,7 @@ fi
 
 swift format lint --recursive --strict Sources Tests Package.swift
 swift build
-swift test
+swift test --no-parallel
 swift run card-field-eval Fixtures/Synthetic/phase1.json >/dev/null
 swift run card-field-eval Fixtures/Synthetic/public-alpha.json >/dev/null
 swift run card-field-scan --help >/dev/null
