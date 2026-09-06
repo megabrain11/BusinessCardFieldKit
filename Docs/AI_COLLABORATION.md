@@ -2,6 +2,43 @@
 
 Living document for humans and AI agents (Codex, Claude Code, others). Update the relevant section when you finish significant work. Newest entries at the top.
 
+## Session 2026-08-31 — Private source-barcode recovery validation boundary (completed)
+
+Goal: make the default-off source-barcode recovery experiment measurable on external physical
+photos without importing private data, overstating unlabeled detection as exactness, or changing
+the shipped scanner path.
+
+### What changed
+
+1. **Truth-aware private manifest**: existing manifests remain compatible. Optional
+   `barcodeTruthAvailable` and `fieldTruthAvailable` flags separate fully labeled cases from
+   detection-only cases. Unavailable truth requires empty expected values and fails closed if a
+   hidden label is present.
+2. **Hardened external boundary**: root, manifest, directory components, and images must be regular
+   non-symlink files beneath the configured root. The command accepts the card-back root and the
+   legacy private-corpus alias, rejects conflicting roots, and keeps missing configuration as a
+   redacted successful skip.
+3. **Paired aggregate experiment**: `--barcode-detection-recovery-experiment` requires at least
+   three measured runs and alternates baseline/recovery order. It reports only truth-aware rates,
+   recovery/regression counts, preservation, request distributions, parity, and signed latency.
+4. **Conservative review gate**: four distinct recovered baseline failures, baseline-success
+   evidence, zero detection/field regression, baseline detection preservation, and a fixed 250 ms
+   p95 duration-delta budget are required for `eligibleForHumanReview`. That state never changes
+   the default automatically.
+
+### Verification and decision
+
+`./Scripts/check-repository.sh` exited 0; 199 tests passed; phase1/public-alpha evaluation,
+golden scenes, card-back evidence, projective masking, and synthetic barcode-recovery evidence all
+remained green. Transient synthetic tests exercise truth separation, aggregate redaction, bounded
+request counts, legacy envelope decoding, and root/manifest/image symlink rejection. No private
+photo, OCR, payload, path, expected value, or per-case output was committed.
+
+No external `PRIVATE_CARD_BACK_CORPUS_ROOT` was configured in this session, so there is no new
+physical-photo performance claim. Keep source recovery default OFF. The next evidence step is a
+human-labeled external corpus containing at least four distinct baseline failures plus successful
+controls across supported devices, materials, lighting, and Vision versions.
+
 ## Session 2026-08-30 — Source barcode detection stress recovery (completed)
 
 Goal: respond to the observed source-QR detection bottleneck with a bounded, measurable experiment

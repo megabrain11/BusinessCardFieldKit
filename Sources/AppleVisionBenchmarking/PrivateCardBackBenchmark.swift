@@ -3,6 +3,12 @@ import CardFieldCore
 import Foundation
 
 #if canImport(CoreGraphics) && canImport(CoreImage) && canImport(ImageIO) && canImport(Vision)
+  enum PrivateCardBackBoundaryError: Error, Equatable {
+    case corpusRootUnavailable
+    case symbolicLinkUnsupported
+    case invalidTruthBoundary
+  }
+
   /// External-only manifest for transient real-photo card-back evaluation.
   public struct PrivateCardBackManifest: Decodable, Sendable {
     public static let currentSchemaVersion = 1
@@ -18,8 +24,15 @@ import Foundation
       guard !cases.isEmpty else { throw CardBackBenchmarkError.emptyCorpus }
     }
 
+    public init(root: URL) throws {
+      let root = try PrivateCardBackBoundary.validatedRoot(root)
+      let manifestURL = root.appendingPathComponent("manifest.json")
+      try PrivateCardBackBoundary.validateRegularFile(manifestURL)
+      try self.init(data: Data(contentsOf: manifestURL))
+    }
+
     func validatedCases(root: URL) throws -> [ValidatedPrivateCardBackCase] {
-      let resolvedRoot = root.standardizedFileURL.resolvingSymlinksInPath()
+      let resolvedRoot = try PrivateCardBackBoundary.validatedRoot(root)
       let rootPrefix =
         resolvedRoot.path.hasSuffix("/") ? resolvedRoot.path : resolvedRoot.path + "/"
       let knownFields = Set(CardField.allCases.map(\.rawValue))
@@ -36,14 +49,15 @@ import Foundation
           throw CardBackBenchmarkError.duplicateImageReference
         }
 
-        let imageURL = resolvedRoot.appendingPathComponent(record.image)
-          .standardizedFileURL.resolvingSymlinksInPath()
+        let imageURL = resolvedRoot.appendingPathComponent(record.image).standardizedFileURL
         guard imageURL.path.hasPrefix(rootPrefix) else {
           throw CardBackBenchmarkError.imageOutsideCorpusRoot
         }
-        guard imageURL.isFileURL,
-          (try? imageURL.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true
-        else { throw CardBackBenchmarkError.imageUnavailable }
+        try PrivateCardBackBoundary.validatePathComponents(
+          root: resolvedRoot,
+          relativeComponents: components.map(String.init)
+        )
+        try PrivateCardBackBoundary.validateRegularFile(imageURL)
 
         let expectedKeys = Set(record.backExpected.keys)
           .union(record.front.map { Set($0.keys) } ?? [])
@@ -51,6 +65,15 @@ import Foundation
         guard expectedKeys.isSubset(of: knownFields) else {
           throw CardBackBenchmarkError.unknownExpectedField
         }
+        guard record.hasBarcodeTruth || record.expectedPayloadKinds.isEmpty else {
+          throw PrivateCardBackBoundaryError.invalidTruthBoundary
+        }
+        guard
+          record.hasFieldTruth
+            || (record.backExpected.isEmpty
+              && (record.front ?? [:]).isEmpty
+              && record.mergedExpected.isEmpty)
+        else { throw PrivateCardBackBoundaryError.invalidTruthBoundary }
         return ValidatedPrivateCardBackCase(record: record, imageURL: imageURL)
       }.sorted { $0.record.image < $1.record.image }
     }
@@ -66,6 +89,11 @@ import Foundation
     public var recognitionLanguages: [String]?
     public var automaticallyDetectsLanguage: Bool?
     public var attemptsCardIsolation: Bool?
+    public var barcodeTruthAvailable: Bool?
+    public var fieldTruthAvailable: Bool?
+
+    var hasBarcodeTruth: Bool { barcodeTruthAvailable ?? true }
+    var hasFieldTruth: Bool { fieldTruthAvailable ?? true }
   }
 
   public enum PrivateCardBackStatus: String, Codable, Sendable {
@@ -79,13 +107,14 @@ import Foundation
 
   /// Redacted command envelope. Neither branch contains corpus paths or source identities.
   public struct PrivateCardBackCommandReport: Codable, Equatable, Sendable {
-    public static let currentSchemaVersion = 1
+    public static let currentSchemaVersion = 2
 
     public var reportSchemaVersion: Int
     public var status: PrivateCardBackStatus
     public var skipReason: PrivateCardBackSkipReason?
     public var report: CardBackBenchmarkReport?
     public var maskingComparison: CardBackMaskingStrategyComparison?
+    public var barcodeRecoveryComparison: PrivateBarcodeDetectionRecoveryComparison?
 
     public static var skipped: Self {
       Self(
@@ -93,7 +122,8 @@ import Foundation
         status: .skipped,
         skipReason: .privateCorpusUnavailable,
         report: nil,
-        maskingComparison: nil
+        maskingComparison: nil,
+        barcodeRecoveryComparison: nil
       )
     }
 
@@ -103,7 +133,8 @@ import Foundation
         status: .completed,
         skipReason: nil,
         report: report,
-        maskingComparison: nil
+        maskingComparison: nil,
+        barcodeRecoveryComparison: nil
       )
     }
 
@@ -115,8 +146,64 @@ import Foundation
         status: .completed,
         skipReason: nil,
         report: nil,
-        maskingComparison: comparison
+        maskingComparison: comparison,
+        barcodeRecoveryComparison: nil
       )
+    }
+
+    public static func completedBarcodeRecoveryComparison(
+      _ comparison: PrivateBarcodeDetectionRecoveryComparison
+    ) -> Self {
+      Self(
+        reportSchemaVersion: currentSchemaVersion,
+        status: .completed,
+        skipReason: nil,
+        report: nil,
+        maskingComparison: nil,
+        barcodeRecoveryComparison: comparison
+      )
+    }
+  }
+
+  enum PrivateCardBackBoundary {
+    static func validatedRoot(_ root: URL) throws -> URL {
+      let root = root.standardizedFileURL
+      guard root.isFileURL else { throw PrivateCardBackBoundaryError.corpusRootUnavailable }
+      let values = try? root.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
+      guard values?.isSymbolicLink != true else {
+        throw PrivateCardBackBoundaryError.symbolicLinkUnsupported
+      }
+      guard values?.isDirectory == true else {
+        throw PrivateCardBackBoundaryError.corpusRootUnavailable
+      }
+      return root
+    }
+
+    static func validatePathComponents(
+      root: URL,
+      relativeComponents: [String]
+    ) throws {
+      var current = root
+      for component in relativeComponents {
+        current.appendPathComponent(component)
+        let values = try? current.resourceValues(forKeys: [.isSymbolicLinkKey])
+        guard values?.isSymbolicLink != true else {
+          throw PrivateCardBackBoundaryError.symbolicLinkUnsupported
+        }
+      }
+    }
+
+    static func validateRegularFile(_ file: URL) throws {
+      guard file.isFileURL else { throw CardBackBenchmarkError.imageUnavailable }
+      let values = try? file.resourceValues(
+        forKeys: [.isRegularFileKey, .isSymbolicLinkKey]
+      )
+      guard values?.isSymbolicLink != true else {
+        throw PrivateCardBackBoundaryError.symbolicLinkUnsupported
+      }
+      guard values?.isRegularFile == true else {
+        throw CardBackBenchmarkError.imageUnavailable
+      }
     }
   }
 

@@ -15,6 +15,9 @@ swift run card-field-scan --help >/dev/null
 swift run card-field-benchmark --help >/dev/null
 swift run card-field-private-benchmark --help >/dev/null
 swift run card-field-private-back-benchmark --help >/dev/null
+env -u PRIVATE_CARD_BACK_CORPUS_ROOT -u PRIVATE_CARD_CORPUS_ROOT \
+    swift run card-field-private-back-benchmark \
+    --barcode-detection-recovery-experiment --warmup 0 --runs 3 >/dev/null
 swift run card-field-benchmark --card-back-evidence --warmup 0 --runs 1 \
     Fixtures/CardBack/manifest.json >/dev/null
 swift run card-field-benchmark --card-back-mask-experiment --warmup 0 --runs 1 \

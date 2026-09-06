@@ -62,8 +62,8 @@ holdout measurement, not a release recommendation or default change.
 Real card photos and expected contact values must remain outside this repository. Create an
 external directory containing `manifest.json` and image files, then set
 `PRIVATE_CARD_BACK_CORPUS_ROOT` for one transient run. Image references must be relative regular
-files under that root; absolute paths, traversal, duplicate references, symlink escape, unavailable
-files, and unknown expected fields fail closed.
+files under that root; absolute paths, traversal, duplicate references, any root/manifest/image
+symlink, unavailable files, and unknown expected fields fail closed.
 
 ```json
 {
@@ -117,6 +117,43 @@ signed latency deltas, run/case counts, and fixed limitations. It does not conta
 paths, payloads, OCR, tokens, expected values, case identifiers, tags, or corpus identity. This
 private aggregate can challenge the synthetic result but cannot itself promote the experimental
 strategy or replace human physical-device acceptance.
+
+To compare default-off source barcode recovery against the shipped one-request path, run:
+
+```sh
+PRIVATE_CARD_BACK_CORPUS_ROOT=/external/private-card-backs \
+  swift run card-field-private-back-benchmark \
+    --barcode-detection-recovery-experiment --warmup 1 --runs 3 --pretty
+```
+
+The source image is loaded only for each transient scan and is not copied or serialized. Baseline
+and recovery scans alternate order. For a case with verified decoded-payload and field truth, omit
+the flags or set both to `true`. A case retained only to measure whether any barcode is detected
+must use empty expected values and declare the unavailable truth explicitly:
+
+```json
+{
+  "image": "damaged-code-001.jpg",
+  "expectedPayloadKinds": [],
+  "backExpected": {},
+  "mergedExpected": {},
+  "reviewExpected": false,
+  "barcodeTruthAvailable": false,
+  "fieldTruthAvailable": false
+}
+```
+
+Detection-only cases contribute to baseline/experimental detection rates but never to payload or
+field exactness. The aggregate schema-1 comparison reports recovery/regression counts, distinct
+baseline failure/success counts, baseline detection and field preservation, token/card-region
+parity, source request distributions, and signed duration deltas. It contains no image name, path,
+payload, OCR, token, expected value, or per-case outcome.
+
+The fixed decision gate is deliberately conservative: at least four distinct baseline-failing
+cases must recover, the corpus must also contain baseline successes, no successful baseline
+detection or baseline field may regress, and the paired p95 duration delta must be at most 250 ms.
+Failure diversity below four is `insufficientEvidence`; other failed criteria are `criteriaNotMet`.
+`eligibleForHumanReview` is not rollout approval and never changes the default configuration.
 
 ## Interpretation and release boundary
 

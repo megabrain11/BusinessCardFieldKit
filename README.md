@@ -87,7 +87,7 @@ For a complete integration walkthrough, see the [CardFieldCore DocC catalog](Sou
 - `CardFieldCore`: contracts, normalization, rules, classification, confidence, evidence, corrections, sanitization, layout grouping, and script-based language inference
 - `AppleVisionAdapter`: locally enhances and recognizes a card image with Vision, converts observations into core tokens with alternative readings, classifies them, and optionally decodes card-back barcodes; the projective masking strategy remains opt-in
 - `CardFieldEvaluation`: decodes synthetic fixtures and reports field-level precision and recall
-- `AppleVisionBenchmarking`: renders versioned synthetic front and back corpora and emits aggregate-only OCR, barcode, merge, and latency evidence, including the default-off conditional dual-pass and projective barcode-masking experiments
+- `AppleVisionBenchmarking`: renders versioned synthetic front and back corpora and emits aggregate-only OCR, barcode, merge, and latency evidence, including the default-off conditional dual-pass, projective barcode-masking, and bounded barcode-recovery experiments
 - `card-field-eval`: command-line fixture runner
 - `card-field-scan`: local Apple-platform image scanner that emits structured JSON
 - `card-field-benchmark`: local Apple-platform benchmark for p50/p95 latency, request counts, execution rates, and exact-field parity without OCR payloads
@@ -132,6 +132,15 @@ The paired report separates QR payload detection from field exactness, alternate
 and reports only aggregate recovery/regression, request, parity, style, and latency evidence. The
 experiment performs at most one enhanced full-frame request after an empty initial result and is
 not approved as a default by synthetic evidence.
+
+For aggregate physical-photo evidence, set an external `PRIVATE_CARD_BACK_CORPUS_ROOT` and add
+`--barcode-detection-recovery-experiment`. The paired runner requires at least three measured runs,
+alternates baseline/experimental order, and reports only truth-aware detection/exactness rates,
+preservation, request counts, and signed latency distributions. Cases without decoded-payload
+truth must declare `barcodeTruthAvailable: false`; they contribute only to detection rates. The
+fixed gate requires four distinct recovered baseline failures, baseline-success preservation, no
+field regression, and a p95 duration delta no greater than 250 ms. Even an eligible result permits
+human review only and never enables recovery by default.
 
 ## Rules and corrections
 

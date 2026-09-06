@@ -355,8 +355,12 @@ import Testing
       """.utf8
     )
     let report = try JSONDecoder().decode(PrivateCardBackCommandReport.self, from: data)
-    #expect(report == .skipped)
+    #expect(report.reportSchemaVersion == 1)
+    #expect(report.status == .skipped)
+    #expect(report.skipReason == .privateCorpusUnavailable)
+    #expect(report.report == nil)
     #expect(report.maskingComparison == nil)
+    #expect(report.barcodeRecoveryComparison == nil)
   }
 
   @Test("Private projective masking experiment requires three measured runs")

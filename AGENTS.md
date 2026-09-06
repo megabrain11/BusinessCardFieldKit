@@ -74,7 +74,8 @@ Sources/
     CardBackBenchmark.swift deterministic card-back scenes and aggregate report
     ProjectiveBarcodeMaskingBenchmark.swift paired request/latency/parity report for the opt-in mask experiment
     BarcodeDetectionRecoveryBenchmark.swift paired aggregate QR stress and recovery evidence
-    PrivateCardBackBenchmark.swift external-only aggregate private back and paired mask evaluator
+    PrivateCardBackBenchmark.swift external-only aggregate private back and paired experiment boundary
+    PrivateBarcodeDetectionRecoveryBenchmark.swift truth-aware aggregate physical-photo recovery evidence
   card-field-scan/main.swift CLI flags mirror scan configuration
   card-field-benchmark/main.swift synthetic diagnostics benchmark CLI
   card-field-private-benchmark/main.swift environment-gated private benchmark CLI
@@ -105,6 +106,11 @@ Docs/, Schemas/, Rules/, Fixtures/, Examples/
   full-frame request only after the initial source request returns no observations. Successful
   initial detection never pays the retry; preprocessing or retry failure preserves the empty
   baseline result. Promotion requires private physical-device evidence, not synthetic improvement.
+- **Private source-recovery evidence is truth-aware and aggregate-only.** Detection-only cases must
+  declare unavailable barcode truth and cannot report payload exactness. Require at least three
+  paired repetitions, four distinct recovered baseline failures, baseline-success and field
+  preservation, and the fixed 250 ms p95 delta budget before marking evidence eligible for human
+  review. Eligibility never changes the default automatically.
 
 ## Current status / open work
 
