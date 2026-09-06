@@ -2,6 +2,68 @@
 
 Living document for humans and AI agents (Codex, Claude Code, others). Update the relevant section when you finish significant work. Newest entries at the top.
 
+## Session 2026-08-27 — Strict-field OCR alternative correction (completed)
+
+Goal: allow lower-ranked OCR readings to recover strict contact syntax without changing default classification or letting alternatives influence free-text fields.
+
+### What changed
+
+1. **Independent opt-in**: `StrictFieldCorrectionOptions` defaults to disabled and adds no output field, warning case, schema, or contract-version change. Disabled mode remains byte-for-value equivalent to the legacy classifier.
+2. **Narrow syntax scope**: only email, explicitly prefixed website (`http`, `https`, or `www`), and phone-shaped lines can inspect alternatives. Name, title, organization, department, and address paths use original tokens plus legacy contact-consumption and email-hint state.
+3. **Fail-closed selection**: a replacement requires exactly one normalized valid alternative, a syntax-score margin of at least `0.30`, and token confidence of at least `0.55`. Candidate array order has no effect. Invalid readings are ignored and duplicate renderings collapse by normalized value.
+4. **Conflict behavior**: a valid primary is never replaced. Competing valid values, low confidence, or insufficient margin retain the original and append `reviewRecommended`; phone conflicts also append `ambiguousPhoneNumber`. Phone alternatives must preserve the printed mobile/work/fax subtype, and local-versus-international variants are never silently reconciled.
+5. **Regression coverage**: tests cover disabled parity, email/website/phone recovery, duplicates, competing values, valid-primary preservation, invalid candidates, subtype changes, low confidence, country-code conflicts, free-text isolation, input-order determinism, public-alpha parity, and all five golden scenes with the option enabled.
+
+### Verification
+
+```sh
+swift test --no-parallel             # 129 passed
+swift run card-field-eval Fixtures/Synthetic/public-alpha.json
+swift run card-field-eval Fixtures/Synthetic/phase1.json
+./Scripts/check-repository.sh
+```
+
+The base, column-aware, and strict-field public-alpha runs retain zero false positives and zero false negatives. The golden suite passes with strict-field correction both off and on.
+
+### Remaining work
+
+- Expand five generated golden scenes toward at least 25 layouts with two deterministic variants each before treating them as a performance corpus.
+- Rebase and audit the separate adaptive OCR diagnostics branch before integrating latency work; it predates the reusable token API, column-aware classifier, and strict-field corrector.
+- Measure correction acceptance and unnecessary-review rates on a private fictionalized or transient real-photo corpus before recommending opt-in for production.
+- Keep real-photo and physical-device evaluation private and report aggregates only.
+
+## Session 2026-08-27 — Column-aware phone label linking (completed)
+
+Goal: use `LayoutAnalyzer` output conservatively when reading order separates a visible phone label from its value, without changing the default classifier result.
+
+### What changed
+
+1. **Safe opt-in API**: `ColumnAwareClassifierOptions` defaults to disabled. `classifyWithDiagnostics` returns the regular `CardFieldResult` plus per-call diagnostics without mutable classifier state; the existing `classify` signature and default behavior are unchanged.
+2. **Real column evidence**: candidate scoring consumes `LayoutAnalyzer.rows` and `LayoutAnalyzer.columns`, distinguishes same-row cross-column links from vertically aligned adjacent rows, applies deterministic thresholds, and fails closed when layout confidence is low.
+3. **Phone-only v1 scope**: the additive pass recovers only mobile/work/fax values missed by the legacy pass. It never removes or rewrites an existing value, does not invent a country prefix, suppresses duplicates, and routes tied candidates to `ambiguousPhoneNumber` plus `reviewRecommended`.
+4. **Regression coverage**: active-path tests cover disabled parity, cross-column and vertical recovery, Korean/English subtype labels, multiple labels, conflicts, low-confidence and invalid-geometry fallback, input-order determinism, duplicate suppression, local/international normalization, diagnostics JSON, public-alpha parity, and the two-column golden scene.
+5. **Compatibility**: no output-contract enum or schema change was required. Hosts opt in by injecting a `CardFieldClassifier` configured with `ColumnAwareClassifierOptions(mode: .enabled)` into `AppleVisionScanner`.
+
+### Verification
+
+```sh
+swift build
+swift test --no-parallel             # 113 passed
+swift run card-field-eval Fixtures/Synthetic/public-alpha.json
+swift run card-field-eval Fixtures/Synthetic/phase1.json
+swift run card-field-scan --help
+./Scripts/check-repository.sh
+```
+
+Both evaluators retain zero false positives and zero false negatives. The public-alpha corpus is also evaluated with column-aware mode enabled in the test suite.
+
+### Remaining work
+
+- Expand five generated golden scenes toward at least 25 layouts with two deterministic variants each before treating them as a performance corpus.
+- Evaluate `OCRToken.alternatives` for syntax-valid strict-field recovery without changing the token contract.
+- Rebase and audit the separate adaptive OCR diagnostics branch before integrating latency work; it predates the reusable token API and this classifier branch.
+- Keep real-photo and physical-device evaluation private and report aggregates only.
+
 ## Session 2026-08-26 — Golden-scene regression corpus (completed)
 
 Goal: close the first item from the open-work list by making preprocessing/recognition changes measurable per change. No commits or pushes were made in this session.
@@ -37,7 +99,7 @@ Goal: unblock the SwiftPM build broken by a duplicated adapter file, then expose
 
 ### Duplicate file resolution and recovery path
 
-`Sources/AppleVisionAdapter/AppleVisionAdapter 2.swift` (untracked, 52,370 B, mtime 2026-08-22 13:53, SHA-256 `5597bff1de12c2a9d9478e8af71f912035d6733fd503bd695223f73d64ae3c44`) shadowed the tracked implementation with an older snapshot missing `refinedForTesting`, the `nonisolated(unsafe)` regex statics, the perspective-correction top-up fix, and format normalization — tests reference `refinedForTesting`, so the tracked file was judged canonical. The duplicate was **moved (not deleted)** to `/Users/yoon/Documents/BusinessCardFieldKit-backups/AppleVisionAdapter 2.swift` (checksum verified identical after move). Restore with: `mv "/Users/yoon/Documents/BusinessCardFieldKit-backups/AppleVisionAdapter 2.swift" "Sources/AppleVisionAdapter/AppleVisionAdapter 2.swift"` — but do not: it reintroduces ambiguous-type build failures while both files exist in the target directory.
+`Sources/AppleVisionAdapter/AppleVisionAdapter 2.swift` (untracked, 52,370 B, mtime 2026-08-22 13:53, SHA-256 `5597bff1de12c2a9d9478e8af71f912035d6733fd503bd695223f73d64ae3c44`) shadowed the tracked implementation with an older snapshot missing `refinedForTesting`, the `nonisolated(unsafe)` regex statics, the perspective-correction top-up fix, and format normalization — tests reference `refinedForTesting`, so the tracked file was judged canonical. The duplicate was **moved (not deleted)** to `<repository-backups>/AppleVisionAdapter 2.swift` (checksum verified identical after move). Restoring it under `Sources/AppleVisionAdapter` would reintroduce ambiguous-type build failures while both files exist in the target directory.
 
 ### What changed
 

@@ -61,6 +61,55 @@ import Testing
     #expect(first.cardRegionSelection == second.cardRegionSelection)
   }
 
+  @Test("Two-column golden scene remains valid with layout-aware phone linking enabled")
+  func goldenTwoColumnSceneSupportsColumnAwareClassification() async throws {
+    let scenes = try GoldenSceneManifest.load()
+    guard let scene = scenes.first(where: { $0.identifier == "golden-two-column-en" }) else {
+      Issue.record("golden-two-column-en missing from manifest")
+      return
+    }
+    let classifier = CardFieldClassifier(
+      columnAwareOptions: ColumnAwareClassifierOptions(mode: .enabled)
+    )
+    let scanner = AppleVisionScanner(
+      classifier: classifier,
+      configuration: scene.scanConfiguration
+    )
+    let scan = try await scanner.scanAsync(cgImage: GoldenSceneRenderer.render(scene))
+
+    let mismatches = GoldenFieldComparator.mismatches(
+      expected: scene.expected,
+      result: scan.fields
+    )
+    #expect(mismatches.isEmpty)
+  }
+
+  @Test("Golden scenes remain valid with strict-field correction enabled")
+  func goldenScenesSupportStrictFieldCorrection() async throws {
+    let scenes = try GoldenSceneManifest.load()
+    let classifier = CardFieldClassifier(
+      strictFieldCorrectionOptions: StrictFieldCorrectionOptions(mode: .enabled)
+    )
+    var failures: [String] = []
+    for scene in scenes {
+      let scanner = AppleVisionScanner(
+        classifier: classifier,
+        configuration: scene.scanConfiguration
+      )
+      let scan = try await scanner.scanAsync(cgImage: GoldenSceneRenderer.render(scene))
+      failures.append(
+        contentsOf: GoldenFieldComparator.mismatches(
+          expected: scene.expected,
+          result: scan.fields
+        ).map { "\(scene.identifier): \($0)" }
+      )
+    }
+
+    if !failures.isEmpty {
+      Issue.record("Strict-field golden regressions:\n\(failures.joined(separator: "\n"))")
+    }
+  }
+
   @Test("Golden manifest stays unique, bounded, and fictional")
   func goldenManifestHygiene() throws {
     let scenes = try GoldenSceneManifest.load()

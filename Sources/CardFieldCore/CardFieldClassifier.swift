@@ -3,25 +3,59 @@ import Foundation
 public struct CardFieldClassifier: Sendable {
   private let rulePacks: [RulePack]
   private let correctionStore: any CorrectionStore
+  public let columnAwareOptions: ColumnAwareClassifierOptions
+  public let strictFieldCorrectionOptions: StrictFieldCorrectionOptions
 
   public init(
     rulePacks: [RulePack] = [],
-    correctionStore: any CorrectionStore = EmptyCorrectionStore()
+    correctionStore: any CorrectionStore = EmptyCorrectionStore(),
+    columnAwareOptions: ColumnAwareClassifierOptions = ColumnAwareClassifierOptions(),
+    strictFieldCorrectionOptions: StrictFieldCorrectionOptions = StrictFieldCorrectionOptions()
   ) {
     self.rulePacks = rulePacks
     self.correctionStore = correctionStore
+    self.columnAwareOptions = columnAwareOptions
+    self.strictFieldCorrectionOptions = strictFieldCorrectionOptions
   }
 
   public func classify(_ observations: [OCRToken]) throws -> CardFieldResult {
+    try classifyWithDiagnostics(observations).result
+  }
+
+  /// Classifies OCR observations and returns optional diagnostics for the
+  /// layout-aware path without storing mutable state on the classifier.
+  public func classifyWithDiagnostics(_ observations: [OCRToken]) throws
+    -> ColumnAwareClassification
+  {
     let tokens = OCRNormalizer.normalize(observations)
     let corrections = try correctionStore.loadCorrections().sorted { $0.id < $1.id }
     var rules = EffectiveRules(packs: rulePacks)
     applyVocabularyCorrections(corrections, to: &rules)
 
     guard !tokens.isEmpty else {
-      return CardFieldResult(
-        ruleVersions: rules.versions,
-        warnings: [.emptyInput, .noVisiblePersonName]
+      return ColumnAwareClassification(
+        result: CardFieldResult(
+          ruleVersions: rules.versions,
+          warnings: [.emptyInput, .noVisiblePersonName]
+        ),
+        diagnostics: nil
+      )
+    }
+    let columnAwareEnabled = columnAwareOptions.mode == .enabled
+    var diagnostics: ColumnAwareDiagnostics?
+    var layoutConfidence = 1.0
+    if columnAwareEnabled {
+      let rows = LayoutAnalyzer.rows(in: tokens)
+      layoutConfidence = ColumnAwareScoringEngine.layoutConfidence(
+        rows: rows,
+        tokens: tokens,
+        strategy: columnAwareOptions.strategy
+      )
+      diagnostics = ColumnAwareDiagnostics(
+        mode: columnAwareOptions.mode.rawValue,
+        strategy: columnAwareOptions.strategy.rawValue,
+        layoutConfidence: layoutConfidence,
+        rowCount: rows.count
       )
     }
 
@@ -31,35 +65,63 @@ public struct CardFieldClassifier: Sendable {
       result.warnings.append(.invalidBoundingBox)
     }
 
-    result.emailAddresses = extractEmails(tokens, consumed: &consumed)
+    let strictResolution = StrictFieldCorrectionEngine.resolve(
+      tokens: tokens,
+      rules: rules,
+      options: strictFieldCorrectionOptions
+    )
+    let strictTokens = strictResolution.tokens
+    var legacyContactConsumption = Set<String>()
+    var legacyEmailValues: [ClassifiedValue] = []
+    if strictFieldCorrectionOptions.mode == .enabled {
+      legacyEmailValues = extractEmails(tokens, consumed: &legacyContactConsumption)
+      _ = extractPhones(
+        tokens,
+        rules: rules,
+        corrections: corrections,
+        consumed: &legacyContactConsumption
+      )
+      _ = extractWebValues(tokens, rules: rules, consumed: &legacyContactConsumption)
+    }
+    result.emailAddresses = extractEmails(strictTokens, consumed: &consumed)
     let phoneResults = extractPhones(
-      tokens, rules: rules, corrections: corrections, consumed: &consumed)
+      strictTokens, rules: rules, corrections: corrections, consumed: &consumed)
     result.mobilePhoneNumbers = phoneResults.mobile
     result.workPhoneNumbers = phoneResults.work
     result.faxNumbers = phoneResults.fax
     if phoneResults.hasAmbiguousNumber {
       result.warnings.append(.ambiguousPhoneNumber)
     }
-    let webResults = extractWebValues(tokens, rules: rules, consumed: &consumed)
+    let webResults = extractWebValues(strictTokens, rules: rules, consumed: &consumed)
     result.websites = webResults.websites
     result.professionalProfileURLs = webResults.profiles
     result.socialHandles = webResults.handles
+    if !strictResolution.reviewFamilies.isEmpty {
+      result.warnings.append(.reviewRecommended)
+      if strictResolution.reviewFamilies.contains(.phone) {
+        result.warnings.append(.ambiguousPhoneNumber)
+      }
+    }
 
+    var identityConsumed =
+      strictFieldCorrectionOptions.mode == .enabled ? legacyContactConsumption : consumed
     let expanded = expandedIdentityLines(tokens, rules: rules)
-    result.jobTitle = bestJobTitle(expanded, rules: rules, excluding: consumed)
+    result.jobTitle = bestJobTitle(expanded, rules: rules, excluding: identityConsumed)
     if let jobTitle = result.jobTitle {
-      consumed.formUnion(jobTitle.sourceTokenIdentifiers)
+      identityConsumed.formUnion(jobTitle.sourceTokenIdentifiers)
     }
-    result.department = bestDepartment(expanded, rules: rules, excluding: consumed)
+    result.department = bestDepartment(expanded, rules: rules, excluding: identityConsumed)
     if let department = result.department {
-      consumed.formUnion(department.sourceTokenIdentifiers)
+      identityConsumed.formUnion(department.sourceTokenIdentifiers)
     }
-    result.addresses = extractAddresses(expanded, rules: rules, excluding: consumed)
+    result.addresses = extractAddresses(expanded, rules: rules, excluding: identityConsumed)
     for address in result.addresses {
-      consumed.formUnion(address.sourceTokenIdentifiers)
+      identityConsumed.formUnion(address.sourceTokenIdentifiers)
     }
 
-    let domainHints = result.emailAddresses.compactMap { value in
+    let identityEmailValues =
+      strictFieldCorrectionOptions.mode == .enabled ? legacyEmailValues : result.emailAddresses
+    let domainHints = identityEmailValues.compactMap { value in
       value.normalizedValue.split(separator: "@").last.map(String.init)
     }
     let domainHint = domainHints.first
@@ -67,7 +129,7 @@ public struct CardFieldClassifier: Sendable {
       expanded,
       rules: rules,
       emailDomains: domainHints,
-      excluding: consumed
+      excluding: identityConsumed
     )
     if let firstOrganization = organizationCandidates.first {
       result.organization = withAlternatives(
@@ -81,21 +143,21 @@ public struct CardFieldClassifier: Sendable {
       }
     }
     if let organization = result.organization {
-      consumed.formUnion(organization.sourceTokenIdentifiers)
+      identityConsumed.formUnion(organization.sourceTokenIdentifiers)
     }
 
     let names = nameCandidates(
       expanded,
       rules: rules,
-      emailLocalParts: result.emailAddresses.compactMap {
+      emailLocalParts: identityEmailValues.compactMap {
         $0.normalizedValue.split(separator: "@").first.map(String.init)
       },
       emailDomains: domainHints,
-      excluding: consumed
+      excluding: identityConsumed
     )
     if let first = names.first, first.value.confidence >= 0.66 {
       result.fullName = withAlternatives(first, from: Array(names.dropFirst()))
-      consumed.formUnion(first.value.sourceTokenIdentifiers)
+      identityConsumed.formUnion(first.value.sourceTokenIdentifiers)
       result.alternateNames = names.dropFirst().filter { candidate in
         candidate.value.confidence >= 0.66
           && candidate.value.sourceTokenIdentifiers != first.value.sourceTokenIdentifiers
@@ -103,7 +165,7 @@ public struct CardFieldClassifier: Sendable {
           && !isUnsupportedSingleLatinName(candidate)
       }.map(\.value)
       for alternateName in result.alternateNames {
-        consumed.formUnion(alternateName.sourceTokenIdentifiers)
+        identityConsumed.formUnion(alternateName.sourceTokenIdentifiers)
       }
       if let competingName = names.dropFirst().first(where: {
         !areLikelyNameVariants(first, $0)
@@ -120,14 +182,14 @@ public struct CardFieldClassifier: Sendable {
       corrections,
       tokens: expanded,
       result: &result,
-      consumed: &consumed
+      consumed: &identityConsumed
     )
     applyOrganizationCorrections(
       corrections,
       emailDomain: domainHint,
       tokens: expanded,
       result: &result,
-      consumed: &consumed
+      consumed: &identityConsumed
     )
     applyPreferredNameCorrections(corrections, result: &result)
 
@@ -139,6 +201,19 @@ public struct CardFieldClassifier: Sendable {
       result.warnings.append(.reviewRecommended)
     }
 
+    if columnAwareEnabled, var activeDiagnostics = diagnostics {
+      applyColumnAwareRules(
+        tokens: tokens,
+        rules: rules,
+        layoutConfidence: layoutConfidence,
+        consumed: &consumed,
+        result: &result,
+        diagnostics: &activeDiagnostics
+      )
+      diagnostics = activeDiagnostics
+    }
+
+    consumed.formUnion(identityConsumed)
     result.unclassifiedLines = tokens.filter { !consumed.contains($0.id) }
     let confidences = allValues(in: result).map(\.confidence)
     result.overallConfidence =
@@ -147,11 +222,151 @@ public struct CardFieldClassifier: Sendable {
       result.warnings.append(.lowConfidenceFields)
     }
     result.warnings = Array(Set(result.warnings)).sorted { $0.rawValue < $1.rawValue }
-    return result
+    return ColumnAwareClassification(result: result, diagnostics: diagnostics)
   }
 }
 
 extension CardFieldClassifier {
+  /// Applies additive, layout-aware label-value rules on top of the legacy
+  /// result. Layout evidence can only recover values the legacy pass missed or
+  /// flag conflicts; it never removes or rewrites an existing value.
+  fileprivate func applyColumnAwareRules(
+    tokens: [OCRToken],
+    rules: EffectiveRules,
+    layoutConfidence: Double,
+    consumed: inout Set<String>,
+    result: inout CardFieldResult,
+    diagnostics: inout ColumnAwareDiagnostics
+  ) {
+    let rows = LayoutAnalyzer.rows(in: tokens)
+    var multiColumnRowCount = 0
+    for row in rows where row.tokens.count > 1 {
+      if LayoutAnalyzer.columns(in: row).count > 1 {
+        multiColumnRowCount += 1
+      }
+    }
+    diagnostics.rowCount = rows.count
+    diagnostics.multiColumnRowCount = multiColumnRowCount
+    if layoutConfidence < ColumnAwareScoringEngine.minimumLayoutConfidence {
+      diagnostics.usedFallback = true
+      diagnostics.fallbackReason = "low-layout-confidence"
+      return
+    }
+    let labels = phoneLabels(in: tokens, rules: rules)
+    let candidates = ColumnAwareScoringEngine.candidates(
+      for: tokens,
+      labels: labels,
+      strategy: columnAwareOptions.strategy
+    )
+    diagnostics.candidateCount = candidates.count
+    if candidates.isEmpty {
+      diagnostics.usedFallback = true
+      diagnostics.fallbackReason = "no-linkable-candidates"
+      return
+    }
+    var selected: [(kind: PhoneKind, candidate: LabelValueCandidate)] = []
+    for label in labels.sorted(by: { $0.tokenIdentifier < $1.tokenIdentifier }) {
+      let linked = candidates.filter { $0.labelToken.id == label.tokenIdentifier }
+      guard let best = linked.first else { continue }
+      if linked.dropFirst().contains(where: {
+        abs($0.score - best.score) <= 0.02 && $0.valueToken.id != best.valueToken.id
+      }) {
+        result.warnings.append(.ambiguousPhoneNumber)
+        result.warnings.append(.reviewRecommended)
+        diagnostics.conflictCount += 1
+        continue
+      }
+      selected.append((label.kind, best))
+    }
+    selected.sort {
+      if $0.candidate.score != $1.candidate.score {
+        return $0.candidate.score > $1.candidate.score
+      }
+      return $0.candidate.labelToken.id < $1.candidate.labelToken.id
+    }
+    var recoveredCount = 0
+    var recoveredValueKinds: [String: PhoneKind] = [:]
+    for selection in selected {
+      let candidate = selection.candidate
+      if let assignedKind = recoveredValueKinds[candidate.valueToken.id] {
+        if assignedKind != selection.kind {
+          result.warnings.append(.ambiguousPhoneNumber)
+          result.warnings.append(.reviewRecommended)
+          diagnostics.conflictCount += 1
+        }
+        continue
+      }
+      guard ColumnAwareScoringEngine.bareNumber(in: candidate.valueToken) != nil,
+        !existingPhoneDigits(result).contains(
+          candidate.valueToken.text.filter(\.isNumber)
+        )
+      else { continue }
+      recoveredValueKinds[candidate.valueToken.id] = selection.kind
+      appendRecoveredPhone(candidate, kind: selection.kind, to: &result)
+      consumed.insert(candidate.valueToken.id)
+      consumed.insert(candidate.labelToken.id)
+      recoveredCount += 1
+    }
+    diagnostics.recoveredValueCount = recoveredCount
+  }
+
+  fileprivate func existingPhoneDigits(_ result: CardFieldResult) -> Set<String> {
+    var digits = Set<String>()
+    for value in result.mobilePhoneNumbers + result.workPhoneNumbers + result.faxNumbers {
+      digits.insert(value.normalizedValue.filter(\.isNumber))
+    }
+    return digits
+  }
+
+  fileprivate func appendRecoveredPhone(
+    _ candidate: LabelValueCandidate,
+    kind: PhoneKind,
+    to result: inout CardFieldResult
+  ) {
+    guard let numberText = ColumnAwareScoringEngine.bareNumber(in: candidate.valueToken) else {
+      return
+    }
+    let original = String(numberText).trimmingCharacters(
+      in: CharacterSet(charactersIn: " .,:;")
+    )
+    let normalized = normalizedPhone(original)
+    var evidence: [Evidence] =
+      kind == .mobile
+      ? [.precededByMobileLabel]
+      : kind == .fax ? [.precededByFaxLabel] : [.precededByWorkLabel]
+    evidence.append(.layoutProminence)
+    let value = ClassifiedValue(
+      normalizedValue: normalized,
+      originalValue: original,
+      confidence: min(0.55 + candidate.valueToken.confidence * 0.25 + candidate.score * 0.15, 0.92),
+      evidence: evidence,
+      sourceTokenIdentifiers: [candidate.labelToken.id, candidate.valueToken.id]
+    )
+    switch kind {
+    case .mobile:
+      result.mobilePhoneNumbers.append(value)
+    case .work:
+      result.workPhoneNumbers.append(value)
+    case .fax:
+      result.faxNumbers.append(value)
+    }
+  }
+
+  fileprivate func phoneLabels(in tokens: [OCRToken], rules: EffectiveRules)
+    -> [ColumnAwarePhoneLabel]
+  {
+    tokens.compactMap { token in
+      let folded = token.text.cardFieldFolded.trimmingCharacters(
+        in: .whitespacesAndNewlines.union(.punctuationCharacters)
+      )
+      guard token.text.split(whereSeparator: \.isWhitespace).count == 1,
+        token.text.range(of: "\\d") == nil,
+        let kind = rules.phoneLabels[folded]
+      else { return nil }
+      return ColumnAwarePhoneLabel(text: token.text, kind: kind, tokenIdentifier: token.id)
+    }
+  }
+
   fileprivate struct InternalCandidate {
     var value: ClassifiedValue
     var position: Int
@@ -286,7 +501,7 @@ extension CardFieldClassifier {
         consumed.insert(labelToken.id)
       }
       let trimmed = match.value.trimmingCharacters(in: CharacterSet(charactersIn: " .,:;"))
-      let normalized = trimmed.filter { $0.isNumber || $0 == "+" }
+      let normalized = normalizedPhone(trimmed)
       let sourceIdentifiers = [adjacentLabel?.token.id, match.token.id].compactMap { $0 }
       let classified = ClassifiedValue(
         normalizedValue: normalized,
@@ -303,6 +518,10 @@ extension CardFieldClassifier {
       values[.fax, default: []].uniqued(),
       hasAmbiguousNumber
     )
+  }
+
+  fileprivate func normalizedPhone(_ text: String) -> String {
+    text.filter { $0.isNumber || $0 == "+" }
   }
 
   fileprivate func adjacentPhoneLabel(

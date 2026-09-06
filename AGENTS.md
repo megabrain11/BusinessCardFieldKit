@@ -46,6 +46,8 @@ Sources/
     Normalization.swift      whitespace/NFC cleanup + reading-order sort
     LanguageInference.swift  TokenLanguageInference (script → BCP-47 tag)
     LayoutAnalyzer.swift     visual row/column grouping (geometry-only)
+    ColumnAwareClassifier.swift optional phone label-value linking and diagnostics
+    StrictFieldCorrection.swift optional syntax-only OCR alternative selection
     Rules.swift              RulePack vocabularies, base rules
     CardFieldClassifier.swift  the whole rule-based classifier (~1200 lines)
     Corrections.swift        local personal correction store protocol
@@ -66,7 +68,7 @@ Docs/, Schemas/, Rules/, Fixtures/, Examples/
 - **Targeted re-recognition never fails a scan**: any error returns original tokens.
 - **Saliency fallback** candidates are capped at 0.75 confidence so real rectangle observations win ties, and still require the contact-text evidence gate.
 - **Shared CIContext** is `nonisolated(unsafe)` — Apple documents `CIContext` as thread-safe; recreating per scan dominates batch latency. Same escape hatch applies to precompiled regex statics.
-- **`OCRToken.alternatives`** decodes legacy JSON missing the key as `[]`; classification consumes only `text`.
+- **`OCRToken.alternatives`** decodes legacy JSON missing the key as `[]`; the default classifier consumes only `text`. The opt-in strict-field corrector may select one alternative only for email, explicit URL, or phone syntax under the fail-closed rules documented in `ARCHITECTURE.md`.
 
 ## Current status / open work
 

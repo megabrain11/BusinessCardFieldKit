@@ -7,6 +7,7 @@ Phase 1 is a pure Swift Package. `CardFieldCore` has no dependency on UIKit, Swi
 ## Highlights
 
 - Deterministic classification with confidence, alternatives, evidence, and source token identifiers
+- Optional fail-closed alternative selection for syntax-valid email, explicit URL, and phone readings
 - Conservative multilingual name handling for Korean, Latin, CJK, and mixed layouts
 - Typed phone numbers, email addresses, websites, profiles, social handles, organizations, titles, departments, and addresses
 - Three explicit rule layers: base rules, locale or industry packs, then local personal corrections

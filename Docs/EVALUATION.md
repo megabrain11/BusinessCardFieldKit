@@ -31,6 +31,10 @@ The JSON report provides true positives, false positives, false negatives, preci
 
 The test suite decodes the public-alpha fixture through the public evaluation contract, rejects duplicate identifiers and unknown expected-field keys, checks synthetic contact namespaces, and requires zero false positives and zero false negatives under the base classifier.
 
+`Fixtures/GoldenScenes/manifest.json` defines five deterministic, Core Text-rendered image scenes that exercise the complete Apple Vision pipeline without committing binary images. They are a minimum regression set, not a performance corpus. The two-column scene also runs with the opt-in column-aware phone linker enabled, and all five scenes run a second time with strict-field correction enabled. A future performance claim requires broader layout coverage and private real-photo evaluation outside the repository.
+
+The public-alpha corpus runs under the default classifier, the opt-in column-aware phone linker, and the opt-in strict-field corrector. Every configuration must retain zero false positives and zero false negatives before an experimental path can broaden its scope.
+
 Regression tests additionally cover rule layers, private corrections, deterministic output, and contribution sanitization.
 
 Production evaluation data is outside this repository. Do not submit real OCR values or images. Contribute a sanitized structural layout and a separately authored fictional regression case.
