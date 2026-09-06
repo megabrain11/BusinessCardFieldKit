@@ -21,6 +21,8 @@ Other OCR provider -> provider adapter -----------------------------------------
                                                                    contribution sanitizer
 
 Synthetic fixtures -> CardFieldEvaluation -> precision/recall report
+Synthetic image manifest -> AppleVisionBenchmarking -> aggregate diagnostics report
+External private root -> AppleVisionBenchmarking -> aggregate-only holdout report
 ```
 
 ## Modules
@@ -42,6 +44,8 @@ By default, the adapter first asks Vision for a bounded set of plausible card qu
 
 Synchronous `scan` methods and async `scanAsync` variants run the same local path; async forms execute on a background task so callers never block an actor. The same pipeline is also exposed as `scanTokens` / `scanTokensAsync`, a generic token-only entry point that stops before classification so non-card documents can reuse local OCR without business-card heuristics influencing their results; hosts own any downstream interpretation of those tokens. The target contains all Apple Vision, Core Image, ImageIO, and Core Graphics imports. A process-wide shared `CIContext` keeps batch scans affordable. The adapter does not access a camera, retain an image, persist output, or use the network. Existing Vision observations can still be converted without running another request.
 
+`AppleVisionScanConfiguration.diagnostics` can opt a caller into aggregate stage timings, Vision request counts, and execution flags on either result type. The default is disabled and creates no instrumentation object. The report has a versioned, Codable, fixed-field contract and deliberately excludes OCR text, token values and confidence, geometry, image data, and paths. Repeated recognition requests accumulate under stable stage identifiers; nested targeted re-recognition time can overlap primary/secondary recognition time, so stage durations are diagnostic spans rather than additive accounting. Enabling diagnostics cannot select a different recognition path.
+
 ### card-field-scan
 
 The Apple-platform CLI exercises the adapter without adding storage behavior. It reads only paths explicitly supplied by the caller and writes JSON to standard output. Structured fields are the default; raw OCR tokens require `--include-tokens`. Pipeline stages can be disabled individually (`--no-preprocess`, `--no-dual-pass`, `--no-re-recognize`, `--no-language-inference`). The scanner isolates one card rather than enumerating every card in a scene. See [Local Image Scanning](Docs/IMAGE_SCANNING.md).
@@ -49,6 +53,10 @@ The Apple-platform CLI exercises the adapter without adding storage behavior. It
 ### CardFieldEvaluation
 
 The evaluation module compares normalized field values in synthetic fixtures. For each field it reports true positives, false positives, false negatives, precision, and recall. The CLI prints a JSON report and performs no upload.
+
+### AppleVisionBenchmarking
+
+The Apple-platform benchmark module expands a versioned manifest into 25 layouts with two deterministic Core Text/Core Graphics variants each. It compares the shipped pipeline against three disabled-stage configurations while consuming only the redacted diagnostics contract and expected-field mismatch counts. A separately versioned 12-layout × 2-variant stress corpus supports a paired targeted re-recognition enabled/disabled report with field-family exactness, false clears, review changes, recoveries, regressions, requests, and duration distributions. An independent environment-gated runner may read a manifest and images from one external private root, but it emits only aggregate paired metrics and never serializes source identity. Private input cannot configure the shipped confidence limit. Both CLIs separate warmup and measured runs and never serialize OCR text, tokens, confidence, images, paths, or case identifiers. Benchmark configurations cannot change the scanner's shipped defaults.
 
 ## Determinism
 
@@ -71,6 +79,12 @@ Arbitrary executable scripts are not supported. This keeps packs portable, inspe
 ## Confidence and evidence
 
 Syntax-specific fields receive confidence from OCR quality plus structural validation. Identity fields combine conservative syntax, OCR confidence, layout prominence, nearby titles, and email-local-part overlap. Organizations use suffixes, institution vocabulary, uppercase or numeric brand shape, and email-domain hints.
+
+Email extraction may remove OCR-introduced whitespace immediately around `@` only when the resulting reading already satisfies complete email syntax. The compact value is normalized while the spaced OCR reading remains `originalValue`; the same domain span is excluded from website extraction. This repair does not join prose lacking a dotted domain and does not alter free-text tokens.
+
+`AppleVisionConditionalDualPassOptions` is an independent, disabled-by-default experiment inside an otherwise configured accurate dual-pass scan. It may retain the corrected primary reading without issuing the opposite language-correction request only when at least two strict-contact families are complete, every line clears the confidence floor, the content is single-script Latin and single-column, no text touches the crop boundary, alternatives do not introduce another valid contact or country-code form, and base classification does not recommend review. Full-image fallback and targeted re-recognition always retain dual-pass. Rejection is the safe outcome: the existing second request and merge run unchanged. The experiment does not alter `CardFieldCore`, scanner defaults, or free-text classification.
+
+Diagnostics schema 2 adds only a fixed reason/count list, the conditional-policy configured flag, and a skip count. It never serializes the reading that triggered a decision. The synthetic benchmark interleaves shipped and conditional scans per scene and reports paired exact/review changes, second-request totals, and p50/p95 deltas; this evidence cannot promote the option without a private real-photo holdout.
 
 An optional, disabled-by-default column-aware pass can recover mobile, work, and fax values when a standalone label and its number are separated by OCR reading order. It consumes the provider-neutral row and column groups from `LayoutAnalyzer`, adds only previously unresolved values, fails closed on weak geometry, and returns per-call diagnostics through `classifyWithDiagnostics`. Other field families remain on the legacy classifier until they have independent evidence and regression coverage.
 

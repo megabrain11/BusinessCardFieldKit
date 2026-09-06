@@ -2,6 +2,117 @@
 
 Living document for humans and AI agents (Codex, Claude Code, others). Update the relevant section when you finish significant work. Newest entries at the top.
 
+## Session 2026-08-28 — Conditional dual-pass experiment (completed)
+
+Goal: evaluate a default-off second-request fast path without weakening the shipped dual-pass default or using unavailable private photos.
+
+### What changed
+
+1. **Fail-closed eligibility**: a primary pass may skip only with at least two complete strict-contact families, all-line confidence at or above 0.82, Latin-only single-script content, simple single-column bounded geometry, no strict alternative/country-code conflict, and no base review warning.
+2. **Structural rejection**: full-image fallback and every targeted re-recognition request always retain dual-pass. Low confidence, mixed script, multiple columns, crop-edge contact, conflicting alternatives, insufficient contacts, and review warnings also retain the existing request and merge.
+3. **Redacted diagnostics v2**: fixed reason counts and skip totals are additive and schema-1 diagnostics decode with empty disabled defaults. No triggering OCR value, confidence, geometry, image, or path is exposed.
+4. **Paired benchmark v2**: shipped and conditional scans alternate order per scene. Reports include aggregate skip reasons, total second-request delta, exact/review pair changes, and p50/p95 deltas.
+5. **Evidence**: three measured runs kept golden 150/150 and stress 72/72 exact with zero review changes. The experiment saved 72 and 39 secondary requests respectively; golden p50/p95 changed by -20.6/-4.1 ms and stress by -61.9/-69.2 ms.
+
+### Decision
+
+Keep the implementation as a default-off experiment only. Do not enable it by default or claim production improvement until the external private real-photo holdout passes. The existing shipped OCR path remains unchanged.
+
+## Session 2026-08-28 — Spaced email OCR recovery (completed)
+
+Goal: continue public performance work while the original private photos are unavailable, and eliminate the single shared stress-corpus contact failure without changing OCR policy.
+
+### What changed
+
+1. **Root cause isolated**: the strongest default-threshold blur case produced a complete email with spaces around `@`. Email extraction missed it and website extraction promoted the domain fragment; targeted ON and OFF failed identically.
+2. **Narrow normalization**: base extraction accepts optional whitespace around `@` only inside complete email syntax, normalizes the compact value, and retains the raw spaced reading as `originalValue`. The website guard now recognizes a spaced preceding `@`.
+3. **False-positive guards**: prose without a dotted domain stays unresolved, while a separate explicit website on the same OCR line remains classified.
+4. **Stronger stress gate**: the paired benchmark test now requires 24/24 exact and zero false clears in both configurations.
+5. **Updated evidence**: a repeat measured 24/24 on both paths with no paired accuracy difference. Targeted execution remained 75% and substantially slower, so no OCR threshold or default changed.
+
+The prior private holdout attempt remains unavailable because only one of the original nineteen transient attachments is still accessible. No partial private corpus or inferred ground truth was created.
+
+## Session 2026-08-28 — Private targeted re-recognition holdout runner (completed)
+
+Goal: make natural low-confidence real-photo evidence measurable without committing or reporting private source identity and without changing recognition policy.
+
+### What changed
+
+1. **External-only corpus boundary**: `card-field-private-benchmark` reads `manifest.json` and relative images only from `PRIVATE_CARD_CORPUS_ROOT`. Absolute/traversal paths, duplicate references, symlink escape, unknown fields, and unavailable files fail closed; errors are generic.
+2. **Aggregate paired evidence**: every case runs at least three repetitions with alternating ON/OFF order. Reports include exact/review rates, field support, false clears, isolation/fallback counts, request and latency distributions, recoveries/regressions, and deterministic case-cluster bootstrap intervals without source identifiers or OCR content.
+3. **Fixed shipped policy**: the external schema cannot configure confidence. Runs use the production `0.35` targeted threshold, and private evaluation cannot mutate scanner defaults.
+4. **Fail-closed decision gate**: fewer than four naturally executing cases is insufficient. Any field regression or excessive p95 increase rejects a change. A clean result permits human review only.
+5. **Current result**: no private corpus is configured in this environment. The CLI emits a redacted successful skip, so real-photo evidence remains unavailable rather than being inferred from synthetic data.
+
+### Verification
+
+Five new tests cover redaction, deterministic order-independent bootstrap, decision gates, filesystem boundaries, and a transient fictional image run with three paired repetitions. `./Scripts/check-repository.sh` passes with 147 tests; public-alpha base, column-aware, and strict-field configurations retain zero false positives and zero false negatives. The private CLI help and missing-corpus skip paths also pass. No private result was fabricated.
+
+## Session 2026-08-28 — Targeted re-recognition stress evidence (completed)
+
+Goal: measure a previously unexercised OCR stage without changing recognition policy or weakening the 50-case golden baseline.
+
+### What changed
+
+1. **Separate 12 × 2 stress corpus**: a versioned fictional manifest adds contact-only small text, blur, low contrast, glare, shadow, mixed script, isolation success, and forced full-image fallback. Existing golden content and expectations are unchanged.
+2. **Transparent threshold cohorts**: four cases use the shipped `0.35` confidence limit, eighteen use a benchmark-only `1.0` calibration limit to guarantee measurable stage execution, and two use a zero-threshold non-execution control. Reports expose only cohort counts.
+3. **Paired aggregate evaluator**: targeted enabled/disabled scans alternate execution order and report field-family exact rates, false clears, review changes, recovered/regressed fields, request counts, and total/targeted p50/p95. OCR values, confidence, images, paths, tags below a four-sample boundary, and case identifiers are absent.
+4. **Safety tests**: stress rendering and aggregation are deterministic; pair order does not change results; diagnostics OFF/ON preserves tokens, fields, and card-region selection; calibrated cases execute, controls do not; isolation and fallback paths are both covered.
+5. **Finding**: one warmup plus one measured run produced 23/24 exact cases on both paths, zero recoveries, zero regressions, and zero review changes. Enabled execution occurred in 18/24 cases, increased total p50 from 133 ms to 341 ms, and added two targeted requests at p50/p95. Shipped-threshold stress cases did not execute.
+
+### Decision
+
+- Keep the shipped targeted re-recognition policy and threshold unchanged.
+- Do not promote the calibration threshold; it is measurement scaffolding only.
+- The next evidence should be a private, aggregate-only real-photo holdout containing natural `≤0.35` confidence cases. Synthetic forced execution does not establish recovery value.
+
+## Session 2026-08-28 — Golden corpus expansion and diagnostics baseline (completed)
+
+Goal: turn the five-scene smoke set into a useful synthetic regression/measurement corpus and use the redacted diagnostics contract to bound the next adaptive OCR experiment without changing recognition policy.
+
+### What changed
+
+1. **Versioned 25 × 2 corpus**: schema v2 separates four fictional content profiles from 25 layout templates. Each layout expands into exactly two deterministic variants, for 50 cases spanning multilingual, layout, lighting, blur, crop, QR, overlap, background, and card-isolation tags. Images remain runtime-only Core Text/Core Graphics renders.
+2. **Shared benchmark module**: `AppleVisionBenchmarking` owns manifest decoding, deterministic rendering, exact-field comparison, aggregate distributions, tag summaries, and the four non-mutating configurations. Small tag groups below four samples are omitted from detailed output.
+3. **Aggregate-only CLI**: `card-field-benchmark` separates warmup from measured runs and serializes only corpus counts/tags, field parity/review rates, p50/p95 timing, Vision request counts, execution rates, and fallback rates. It has no case identifier, OCR/token/confidence, image, or path field.
+4. **Expanded gates**: all 50 cases pass the shipped default, column-aware, and strict-field configurations. Diagnostics OFF/ON preserve identical token, field, and card-region results for all cases. Manifest hygiene, deterministic rendering, report redaction, configuration minimality, percentile determinism, and input-order independence have direct tests.
+5. **Measured conclusion**: one warmup plus one measured run kept 50/50 exact cases under default, while disabling dual-pass reduced median latency and one text request but fell to 46/50. Targeted re-recognition executed zero times, so its isolated value/cost is insufficiently exercised. No adaptive gate was implemented.
+
+### Next decision boundary
+
+- Do not make single-pass the default from synthetic timing; the observed 8% exact-case loss is a hard regression.
+- The only justified next experiment is a default-OFF, fail-closed dual-pass skip gated by complete primary-pass contact syntax and absence of low-confidence/multilingual evidence, evaluated first on a private real-photo holdout.
+- Add targeted-re-recognition-positive private cases before drawing conclusions about that stage.
+
+## Session 2026-08-27 — Adaptive OCR diagnostics integration (completed)
+
+Goal: integrate the observation layer from the historical adaptive branch on current `scanTokens`/column-aware/strict-field architecture without adopting an unmeasured recognition policy.
+
+### What changed
+
+1. **Shared opt-in contract**: `AppleVisionDiagnosticsOptions` defaults to disabled. Both `AppleVisionScanResult` and `AppleVisionTokenScanResult` add an optional versioned, Codable `AppleVisionScanDiagnostics` payload; disabled calls return `nil` and allocate no instrumentation object.
+2. **Current-pipeline instrumentation**: the shared recognition path measures fixed stages and counts rectangle, saliency, primary/secondary text, and targeted text requests. It reports configured/executed dual-pass and targeted refinement plus card-isolation attempt/success/fallback flags. Repeated candidate requests aggregate deterministically.
+3. **Privacy boundary**: diagnostics contain only fixed identifiers, durations, counts, and booleans. OCR text, alternatives, token values/confidence, geometry, images, paths, and arbitrary metadata are excluded by design and contract tests. No logging or persistence was added.
+4. **Parity before policy**: no adaptive gating or alternative promotion was integrated. The existing OCR path, reusable token API, column-aware classifier, and strict-field corrector remain unchanged. All five golden scenes compare OFF versus ON and require identical tokens, fields, and region selection; token-only scanning has an independent parity/request-count test.
+5. **Historical audit**: the 10 commits on `codex/adaptive-ocr-diagnostics` were reviewed without cherry-picking or modifying its worktree. Only diagnostics concepts were reimplemented; eight evolving adaptive-policy commits were deferred until current measurements justify a strategy. The commit-by-commit table lives in `Docs/ADAPTIVE_OCR_DIAGNOSTICS.md`.
+
+### Verification
+
+```sh
+swift test --no-parallel
+swift run card-field-eval Fixtures/Synthetic/public-alpha.json
+./Scripts/check-repository.sh
+```
+
+The base, column-aware, and strict-field public-alpha configurations retain zero false positives and zero false negatives through their regression tests. Diagnostics OFF/ON preserve all five golden results and the provider-neutral token-only result.
+
+### Remaining work
+
+- Collect stage/request distributions on the expanded synthetic and private aggregate-only corpora before proposing conditional dual-pass.
+- Treat overlapping stage spans correctly: targeted re-recognition can contain primary/secondary request time, so only total duration is end-to-end latency.
+- Keep any future adaptive policy independently opt-in and compare accuracy, review rate, p50/p95, and request savings against the unchanged default.
+- Expand the five-scene golden regression set before using it as a performance corpus.
+
 ## Session 2026-08-27 — Strict-field OCR alternative correction (completed)
 
 Goal: allow lower-ranked OCR readings to recover strict contact syntax without changing default classification or letting alternatives influence free-text fields.

@@ -1,114 +1,187 @@
-[
-  {
-    "identifier": "golden-straight-card-en",
-    "canvas": {"width": 1600, "height": 900},
-    "backgroundGray": 1.0,
-    "lines": [
-      {"text": "Alex Kim", "fontSize": 64, "x": 0.08, "y": 0.30},
-      {"text": "Founder & CEO", "fontSize": 44, "x": 0.08, "y": 0.42},
-      {"text": "alex.kim@example.com", "fontSize": 36, "x": 0.08, "y": 0.52},
-      {"text": "Tel +1 202 555 0147", "fontSize": 36, "x": 0.08, "y": 0.60},
-      {"text": "www.example.com", "fontSize": 36, "x": 0.08, "y": 0.68}
-    ],
-    "recognitionLanguages": ["en-US"],
-    "automaticallyDetectsLanguage": false,
-    "cardRegionMode": "disabled",
-    "expected": {
-      "fullName": ["Alex Kim"],
-      "jobTitle": ["Founder & CEO"],
-      "emailAddresses": ["alex.kim@example.com"],
-      "workPhoneNumbers": ["+12025550147"],
-      "websites": ["www.example.com"]
+{
+  "schemaVersion": 2,
+  "corpusVersion": "golden-2.0.0",
+  "profiles": {
+    "english": {
+      "lines": ["Casey Rowan", "Product Director", "NORTHSTAR LABS", "casey.rowan@northstar.example", "Mobile +1 202 555 0147"],
+      "recognitionLanguages": ["en-US"],
+      "automaticallyDetectsLanguage": false,
+      "expected": {"fullName": ["Casey Rowan"], "jobTitle": ["Product Director"], "organization": ["NORTHSTAR LABS"], "emailAddresses": ["casey.rowan@northstar.example"], "mobilePhoneNumbers": ["+12025550147"]}
+    },
+    "korean": {
+      "lines": ["한가람", "Product Lead", "새봄 연구소", "garam.han@saebom.example", "휴대폰 010-0000-0001"],
+      "recognitionLanguages": ["ko-KR", "en-US"],
+      "automaticallyDetectsLanguage": true,
+      "expected": {"fullName": ["한가람"], "jobTitle": ["Product Lead"], "organization": ["새봄 연구소"], "emailAddresses": ["garam.han@saebom.example"], "mobilePhoneNumbers": ["01000000001"]}
+    },
+    "mixed": {
+      "lines": ["Mina Park", "Chief Executive Officer", "한빛 연구소", "mina.park@hanbit.example", "M 010-0000-0002"],
+      "recognitionLanguages": ["ko-KR", "en-US"],
+      "automaticallyDetectsLanguage": true,
+      "expected": {"fullName": ["Mina Park"], "jobTitle": ["Chief Executive Officer"], "organization": ["한빛 연구소"], "emailAddresses": ["mina.park@hanbit.example"], "mobilePhoneNumbers": ["01000000002"]}
+    },
+    "compact": {
+      "lines": ["Avery Stone", "Founder", "STONEWORKS CO", "avery@stoneworks.example", "T +1 415 555 0198"],
+      "recognitionLanguages": ["en-US"],
+      "automaticallyDetectsLanguage": false,
+      "expected": {"fullName": ["Avery Stone"], "jobTitle": ["Founder"], "organization": ["STONEWORKS CO"], "emailAddresses": ["avery@stoneworks.example"], "workPhoneNumbers": ["+14155550198"]}
     }
   },
-  {
-    "identifier": "golden-skewed-card-en",
-    "canvas": {"width": 2000, "height": 1200},
-    "backgroundGray": 0.15,
-    "cardQuad": [[0.19, 0.208], [0.81, 0.2375], [0.7775, 0.725], [0.21, 0.696]],
-    "lines": [
-      {"text": "Jordan Lee", "fontSize": 58, "x": 0.26, "y": 0.333},
-      {"text": "Product Director", "fontSize": 40, "x": 0.26, "y": 0.417},
-      {"text": "jordan.lee@example.com", "fontSize": 34, "x": 0.26, "y": 0.533},
-      {"text": "Tel +1 415 555 0198", "fontSize": 34, "x": 0.26, "y": 0.608}
-    ],
-    "recognitionLanguages": ["en-US"],
-    "automaticallyDetectsLanguage": false,
-    "cardRegionMode": "automatic",
-    "expected": {
-      "fullName": ["Jordan Lee"],
-      "jobTitle": ["Product Director"],
-      "emailAddresses": ["jordan.lee@example.com"],
-      "workPhoneNumbers": ["+14155550198"]
+  "layouts": [
+    {
+      "identifier": "golden-straight-card-en", "profile": "english", "preset": "left",
+      "canvas": {"width": 1600, "height": 900}, "tags": ["english", "horizontal", "straight"],
+      "backgroundGray": 1.0, "textGray": 0.0,
+      "variants": [{"identifier": "clean", "tags": ["clean"]}, {"identifier": "mild-exposure", "tags": ["exposure"], "exposureEV": 0.08}]
+    },
+    {
+      "identifier": "golden-skewed-card-en", "profile": "english", "preset": "isolated",
+      "canvas": {"width": 2000, "height": 1200}, "tags": ["english", "automatic-isolation", "perspective-15"],
+      "backgroundGray": 0.16, "cardGray": 0.96, "textGray": 0.0,
+      "cardQuad": [[0.19, 0.20], [0.82, 0.23], [0.78, 0.73], [0.21, 0.70]],
+      "variants": [{"identifier": "clean", "tags": ["clean"]}, {"identifier": "soft-blur", "tags": ["blur"], "blurRadius": 0.35}]
+    },
+    {
+      "identifier": "golden-korean-card", "profile": "korean", "preset": "left",
+      "canvas": {"width": 1600, "height": 900}, "tags": ["korean", "horizontal", "hangul"],
+      "backgroundGray": 1.0, "textGray": 0.0,
+      "variants": [{"identifier": "clean", "tags": ["clean"]}, {"identifier": "low-contrast", "tags": ["low-contrast"], "textGrayDelta": 0.18, "backgroundGrayDelta": -0.05}]
+    },
+    {
+      "identifier": "golden-compact-lowcontrast-en", "profile": "compact", "preset": "compact",
+      "canvas": {"width": 900, "height": 520}, "tags": ["english", "compact", "small-text", "low-contrast"],
+      "backgroundGray": 0.88, "textGray": 0.25,
+      "variants": [{"identifier": "clean", "tags": ["clean"]}, {"identifier": "smaller", "tags": ["small-text"], "fontScale": 0.88}]
+    },
+    {
+      "identifier": "golden-two-column-en", "profile": "english", "preset": "twoColumn",
+      "canvas": {"width": 1500, "height": 850}, "tags": ["english", "two-column", "horizontal"],
+      "backgroundGray": 1.0, "textGray": 0.0,
+      "variants": [{"identifier": "clean", "tags": ["clean"]}, {"identifier": "shadow", "tags": ["shadow"], "shadowOpacity": 0.08}]
+    },
+    {
+      "identifier": "golden-portrait-en", "profile": "english", "preset": "portrait",
+      "canvas": {"width": 900, "height": 1400}, "tags": ["english", "portrait", "vertical"],
+      "backgroundGray": 1.0, "textGray": 0.0,
+      "variants": [{"identifier": "clean", "tags": ["clean"]}, {"identifier": "offset", "tags": ["crop"], "offsetX": -0.015, "offsetY": 0.01}]
+    },
+    {
+      "identifier": "golden-centered-en", "profile": "compact", "preset": "centered",
+      "canvas": {"width": 1600, "height": 900}, "tags": ["english", "centered", "horizontal"],
+      "backgroundGray": 0.97, "textGray": 0.05,
+      "variants": [{"identifier": "clean", "tags": ["clean"]}, {"identifier": "glare", "tags": ["glare"], "glareOpacity": 0.10}]
+    },
+    {
+      "identifier": "golden-staggered-en", "profile": "english", "preset": "staggered",
+      "canvas": {"width": 1500, "height": 900}, "tags": ["english", "staggered", "irregular-layout"],
+      "backgroundGray": 1.0, "textGray": 0.0,
+      "variants": [{"identifier": "clean", "tags": ["clean"]}, {"identifier": "soft-blur", "tags": ["blur"], "blurRadius": 0.30}]
+    },
+    {
+      "identifier": "golden-mixed-script", "profile": "mixed", "preset": "left",
+      "canvas": {"width": 1650, "height": 920}, "tags": ["mixed-script", "korean", "english"],
+      "backgroundGray": 1.0, "textGray": 0.0,
+      "variants": [{"identifier": "clean", "tags": ["clean"]}, {"identifier": "mild-exposure", "tags": ["exposure"], "exposureEV": -0.08}]
+    },
+    {
+      "identifier": "golden-two-column-ko", "profile": "korean", "preset": "twoColumn",
+      "canvas": {"width": 1500, "height": 850}, "tags": ["korean", "two-column", "hangul"],
+      "backgroundGray": 1.0, "textGray": 0.0,
+      "variants": [{"identifier": "clean", "tags": ["clean"]}, {"identifier": "low-contrast", "tags": ["low-contrast"], "textGrayDelta": 0.15}]
+    },
+    {
+      "identifier": "golden-qr-right-en", "profile": "english", "preset": "left",
+      "canvas": {"width": 1700, "height": 950}, "tags": ["english", "qr", "horizontal"],
+      "backgroundGray": 1.0, "textGray": 0.0,
+      "variants": [{"identifier": "clean", "tags": ["clean"]}, {"identifier": "glare", "tags": ["glare"], "glareOpacity": 0.08}]
+    },
+    {
+      "identifier": "golden-qr-compact-ko", "profile": "korean", "preset": "compact",
+      "canvas": {"width": 1100, "height": 650}, "tags": ["korean", "qr", "compact"],
+      "backgroundGray": 0.98, "textGray": 0.02,
+      "variants": [{"identifier": "clean", "tags": ["clean"]}, {"identifier": "smaller", "tags": ["small-text"], "fontScale": 0.90}]
+    },
+    {
+      "identifier": "golden-complex-background", "profile": "compact", "preset": "isolated",
+      "canvas": {"width": 1900, "height": 1100}, "tags": ["english", "complex-background", "automatic-isolation"],
+      "backgroundGray": 0.68, "cardGray": 0.98, "textGray": 0.0,
+      "cardQuad": [[0.18, 0.21], [0.83, 0.21], [0.80, 0.73], [0.20, 0.73]],
+      "variants": [{"identifier": "clean", "tags": ["clean"]}, {"identifier": "shadow", "tags": ["shadow"], "shadowOpacity": 0.07}]
+    },
+    {
+      "identifier": "golden-overlapping-card", "profile": "english", "preset": "isolated",
+      "canvas": {"width": 1900, "height": 1100}, "tags": ["english", "overlapping-card", "automatic-isolation"],
+      "backgroundGray": 0.30, "cardGray": 0.98, "textGray": 0.0,
+      "cardQuad": [[0.20, 0.20], [0.82, 0.22], [0.79, 0.73], [0.22, 0.71]],
+      "variants": [{"identifier": "clean", "tags": ["clean"]}, {"identifier": "soft-blur", "tags": ["blur"], "blurRadius": 0.25}]
+    },
+    {
+      "identifier": "golden-crop-left", "profile": "english", "preset": "left",
+      "canvas": {"width": 1500, "height": 850}, "tags": ["english", "crop", "left-edge"],
+      "backgroundGray": 1.0, "textGray": 0.0,
+      "variants": [{"identifier": "clean", "tags": ["clean"]}, {"identifier": "cropped", "tags": ["crop"], "offsetX": -0.035}]
+    },
+    {
+      "identifier": "golden-crop-right", "profile": "compact", "preset": "centered",
+      "canvas": {"width": 1500, "height": 850}, "tags": ["english", "crop", "right-edge"],
+      "backgroundGray": 1.0, "textGray": 0.0,
+      "variants": [{"identifier": "clean", "tags": ["clean"]}, {"identifier": "cropped", "tags": ["crop"], "offsetX": 0.025}]
+    },
+    {
+      "identifier": "golden-perspective-15", "profile": "mixed", "preset": "isolated",
+      "canvas": {"width": 2000, "height": 1200}, "tags": ["mixed-script", "automatic-isolation", "perspective-15"],
+      "backgroundGray": 0.20, "cardGray": 0.97, "textGray": 0.0,
+      "cardQuad": [[0.18, 0.20], [0.82, 0.25], [0.78, 0.73], [0.21, 0.68]],
+      "variants": [{"identifier": "clean", "tags": ["clean"]}, {"identifier": "exposed", "tags": ["exposure"], "exposureEV": 0.10}]
+    },
+    {
+      "identifier": "golden-perspective-30", "profile": "english", "preset": "isolated",
+      "canvas": {"width": 2100, "height": 1250}, "tags": ["english", "automatic-isolation", "perspective-30"],
+      "backgroundGray": 0.18, "cardGray": 0.98, "textGray": 0.0,
+      "cardQuad": [[0.16, 0.17], [0.84, 0.29], [0.75, 0.76], [0.24, 0.66]],
+      "variants": [{"identifier": "clean", "tags": ["clean"]}, {"identifier": "glare", "tags": ["glare"], "glareOpacity": 0.08}]
+    },
+    {
+      "identifier": "golden-small-text-wide", "profile": "english", "preset": "wide",
+      "canvas": {"width": 2100, "height": 850}, "tags": ["english", "wide", "small-text"],
+      "backgroundGray": 1.0, "textGray": 0.0,
+      "variants": [{"identifier": "clean", "tags": ["clean"], "fontScale": 0.92}, {"identifier": "smaller", "tags": ["small-text"], "fontScale": 0.82}]
+    },
+    {
+      "identifier": "golden-dark-card", "profile": "compact", "preset": "left",
+      "canvas": {"width": 1600, "height": 900}, "tags": ["english", "dark-card", "inverse-contrast"],
+      "backgroundGray": 0.35, "textGray": 0.0,
+      "variants": [{"identifier": "clean", "tags": ["clean"]}, {"identifier": "low-contrast", "tags": ["low-contrast"], "textGrayDelta": 0.12, "backgroundGrayDelta": 0.05}]
+    },
+    {
+      "identifier": "golden-high-exposure", "profile": "english", "preset": "left",
+      "canvas": {"width": 1600, "height": 900}, "tags": ["english", "exposure", "horizontal"],
+      "backgroundGray": 0.93, "textGray": 0.08,
+      "variants": [{"identifier": "clean", "tags": ["clean"]}, {"identifier": "exposed", "tags": ["exposure"], "exposureEV": 0.16}]
+    },
+    {
+      "identifier": "golden-shadow-band", "profile": "mixed", "preset": "left",
+      "canvas": {"width": 1650, "height": 920}, "tags": ["mixed-script", "shadow", "horizontal"],
+      "backgroundGray": 1.0, "textGray": 0.0,
+      "variants": [{"identifier": "clean", "tags": ["clean"]}, {"identifier": "shadow", "tags": ["shadow"], "shadowOpacity": 0.10}]
+    },
+    {
+      "identifier": "golden-glare-band", "profile": "korean", "preset": "left",
+      "canvas": {"width": 1650, "height": 920}, "tags": ["korean", "glare", "horizontal"],
+      "backgroundGray": 0.96, "textGray": 0.02,
+      "variants": [{"identifier": "clean", "tags": ["clean"]}, {"identifier": "glare", "tags": ["glare"], "glareOpacity": 0.12}]
+    },
+    {
+      "identifier": "golden-blurred-compact", "profile": "compact", "preset": "compact",
+      "canvas": {"width": 1000, "height": 580}, "tags": ["english", "blur", "compact"],
+      "backgroundGray": 0.96, "textGray": 0.04,
+      "variants": [{"identifier": "clean", "tags": ["clean"]}, {"identifier": "blurred", "tags": ["blur"], "blurRadius": 0.45}]
+    },
+    {
+      "identifier": "golden-wide-banner", "profile": "mixed", "preset": "wide",
+      "canvas": {"width": 2200, "height": 800}, "tags": ["mixed-script", "wide", "banner"],
+      "backgroundGray": 1.0, "textGray": 0.0,
+      "variants": [{"identifier": "clean", "tags": ["clean"]}, {"identifier": "offset", "tags": ["crop"], "offsetY": 0.015}]
     }
-  },
-  {
-    "identifier": "golden-korean-card",
-    "canvas": {"width": 1600, "height": 900},
-    "backgroundGray": 1.0,
-    "lines": [
-      {"text": "가온 누리", "fontSize": 64, "x": 0.08, "y": 0.30},
-      {"text": "제품 팀장", "fontSize": 44, "x": 0.08, "y": 0.42},
-      {"text": "새봄 연구소", "fontSize": 48, "x": 0.08, "y": 0.53},
-      {"text": "gaon.nuri@saebom.example", "fontSize": 36, "x": 0.08, "y": 0.63},
-      {"text": "휴대폰 010-0000-0001", "fontSize": 34, "x": 0.08, "y": 0.71}
-    ],
-    "recognitionLanguages": ["ko-KR", "en-US"],
-    "automaticallyDetectsLanguage": true,
-    "cardRegionMode": "disabled",
-    "expected": {
-      "fullName": ["가온 누리"],
-      "jobTitle": ["제품 팀장"],
-      "organization": ["새봄 연구소"],
-      "emailAddresses": ["gaon.nuri@saebom.example"],
-      "mobilePhoneNumbers": ["01000000001"]
-    }
-  },
-  {
-    "identifier": "golden-compact-lowcontrast-en",
-    "canvas": {"width": 900, "height": 520},
-    "backgroundGray": 0.88,
-    "textGray": 0.30,
-    "lines": [
-      {"text": "Riley Fox", "fontSize": 40, "x": 0.10, "y": 0.24},
-      {"text": "Design Engineer", "fontSize": 30, "x": 0.10, "y": 0.38},
-      {"text": "riley.fox@driftwood.example", "fontSize": 26, "x": 0.10, "y": 0.54},
-      {"text": "T +1 303 555 0164", "fontSize": 26, "x": 0.10, "y": 0.66},
-      {"text": "driftwood.example", "fontSize": 24, "x": 0.10, "y": 0.78}
-    ],
-    "recognitionLanguages": ["en-US"],
-    "automaticallyDetectsLanguage": false,
-    "cardRegionMode": "disabled",
-    "expected": {
-      "fullName": ["Riley Fox"],
-      "jobTitle": ["Design Engineer"],
-      "emailAddresses": ["riley.fox@driftwood.example"],
-      "workPhoneNumbers": ["+13035550164"],
-      "websites": ["driftwood.example"]
-    }
-  },
-  {
-    "identifier": "golden-two-column-en",
-    "canvas": {"width": 1400, "height": 800},
-    "backgroundGray": 1.0,
-    "lines": [
-      {"text": "Morgan Vale", "fontSize": 56, "x": 0.08, "y": 0.28},
-      {"text": "Head of Operations", "fontSize": 38, "x": 0.08, "y": 0.43},
-      {"text": "VALEWORKS CO.", "fontSize": 42, "x": 0.08, "y": 0.58},
-      {"text": "morgan.vale@valeworks.example", "fontSize": 30, "x": 0.55, "y": 0.48},
-      {"text": "M +1 646 555 0110", "fontSize": 30, "x": 0.55, "y": 0.61},
-      {"text": "valeworks.example", "fontSize": 28, "x": 0.55, "y": 0.74}
-    ],
-    "recognitionLanguages": ["en-US"],
-    "automaticallyDetectsLanguage": false,
-    "cardRegionMode": "disabled",
-    "expected": {
-      "fullName": ["Morgan Vale"],
-      "jobTitle": ["Head of Operations"],
-      "organization": ["VALEWORKS CO."],
-      "emailAddresses": ["morgan.vale@valeworks.example"],
-      "mobilePhoneNumbers": ["+16465550110"],
-      "websites": ["valeworks.example"]
-    }
-  }
-]
+  ]
+}

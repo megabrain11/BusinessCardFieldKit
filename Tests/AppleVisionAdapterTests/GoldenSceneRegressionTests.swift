@@ -1,3 +1,4 @@
+import AppleVisionBenchmarking
 import CardFieldCore
 import Foundation
 import Testing
@@ -8,7 +9,7 @@ import Testing
   @Test("Golden scenes reproduce their expected fields through the complete pipeline")
   func goldenScenesReproduceExpectedFields() async throws {
     let scenes = try GoldenSceneManifest.load()
-    #expect(scenes.count >= 5)
+    #expect(scenes.count == 50)
 
     var failures: [String] = []
     for scene in scenes {
@@ -45,7 +46,9 @@ import Testing
   func goldenSceneRepeatScansAreStable() async throws {
     let scenes = try GoldenSceneManifest.load()
     guard
-      let scene = scenes.first(where: { $0.identifier == "golden-korean-card" })
+      let scene = scenes.first(where: {
+        $0.layoutIdentifier == "golden-korean-card" && $0.variantIdentifier == "clean"
+      })
     else {
       Issue.record("golden-korean-card missing from manifest")
       return
@@ -61,27 +64,30 @@ import Testing
     #expect(first.cardRegionSelection == second.cardRegionSelection)
   }
 
-  @Test("Two-column golden scene remains valid with layout-aware phone linking enabled")
-  func goldenTwoColumnSceneSupportsColumnAwareClassification() async throws {
+  @Test("Golden scenes remain valid with column-aware classification enabled")
+  func goldenScenesSupportColumnAwareClassification() async throws {
     let scenes = try GoldenSceneManifest.load()
-    guard let scene = scenes.first(where: { $0.identifier == "golden-two-column-en" }) else {
-      Issue.record("golden-two-column-en missing from manifest")
-      return
-    }
     let classifier = CardFieldClassifier(
       columnAwareOptions: ColumnAwareClassifierOptions(mode: .enabled)
     )
-    let scanner = AppleVisionScanner(
-      classifier: classifier,
-      configuration: scene.scanConfiguration
-    )
-    let scan = try await scanner.scanAsync(cgImage: GoldenSceneRenderer.render(scene))
+    var failures: [String] = []
+    for scene in scenes {
+      let scanner = AppleVisionScanner(
+        classifier: classifier,
+        configuration: scene.scanConfiguration
+      )
+      let scan = try await scanner.scanAsync(cgImage: GoldenSceneRenderer.render(scene))
+      failures.append(
+        contentsOf: GoldenFieldComparator.mismatches(
+          expected: scene.expected,
+          result: scan.fields
+        ).map { "\(scene.identifier): \($0)" }
+      )
+    }
 
-    let mismatches = GoldenFieldComparator.mismatches(
-      expected: scene.expected,
-      result: scan.fields
-    )
-    #expect(mismatches.isEmpty)
+    if !failures.isEmpty {
+      Issue.record("Column-aware golden regressions:\n\(failures.joined(separator: "\n"))")
+    }
   }
 
   @Test("Golden scenes remain valid with strict-field correction enabled")
@@ -110,6 +116,38 @@ import Testing
     }
   }
 
+  @Test("Conditional dual-pass remains field-identical across the golden corpus")
+  func conditionalDualPassGoldenParity() async throws {
+    let scenes = try GoldenSceneManifest.load()
+    var failures: [String] = []
+    var skipCount = 0
+    for scene in scenes {
+      let image = try GoldenSceneRenderer.render(scene)
+      var baselineConfiguration = scene.scanConfiguration
+      baselineConfiguration.diagnostics = AppleVisionDiagnosticsOptions(isEnabled: true)
+      var experimentalConfiguration = baselineConfiguration
+      experimentalConfiguration.conditionalDualPass = AppleVisionConditionalDualPassOptions(
+        mode: .enabled)
+
+      let baseline = try await AppleVisionScanner(configuration: baselineConfiguration)
+        .scanAsync(cgImage: image)
+      let experimental = try await AppleVisionScanner(configuration: experimentalConfiguration)
+        .scanAsync(cgImage: image)
+      if baseline.fields != experimental.fields {
+        failures.append("\(scene.identifier): fields changed")
+      }
+      if baseline.cardRegionSelection != experimental.cardRegionSelection {
+        failures.append("\(scene.identifier): card-region selection changed")
+      }
+      skipCount += experimental.diagnostics?.dualPassSkipCount ?? 0
+    }
+
+    if !failures.isEmpty {
+      Issue.record("Conditional dual-pass golden regressions:\n\(failures.joined(separator: "\n"))")
+    }
+    #expect(skipCount > 0)
+  }
+
   @Test("Golden manifest stays unique, bounded, and fictional")
   func goldenManifestHygiene() throws {
     let scenes = try GoldenSceneManifest.load()
@@ -121,14 +159,9 @@ import Testing
     for scene in scenes {
       #expect(scene.canvas.width >= 320)
       #expect(scene.canvas.height >= 200)
-      #expect(!scene.lines.isEmpty)
-
-      for line in scene.lines {
-        #expect((0...1).contains(line.x))
-        #expect((0...1).contains(line.y))
-        #expect(line.fontSize >= 16)
-        #expect((0...1).contains(scene.resolvedTextGray))
-      }
+      #expect(!scene.profile.lines.isEmpty)
+      #expect(scene.profile.lines.count == 5)
+      #expect((0...1).contains(scene.textGray))
 
       if let quad = scene.cardQuad {
         #expect(quad.count == 4)

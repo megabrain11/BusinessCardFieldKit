@@ -10,6 +10,7 @@ BusinessCardFieldKit is a privacy-first Swift Package that turns business-card O
 - `AppleVisionAdapter` — optional local Apple Vision pipeline (enhancement → card isolation → OCR → classification). The only target allowed to import Vision/CoreImage/CoreGraphics/ImageIO.
 - `CardFieldEvaluation` + `card-field-eval` — synthetic fixture precision/recall.
 - `card-field-scan` — local Apple-platform CLI emitting JSON to stdout.
+- `AppleVisionBenchmarking` + `card-field-benchmark` — deterministic synthetic image rendering and aggregate-only OCR latency/request comparisons.
 
 Out of scope forever: contact databases, identity resolution/merging, relationship graphs, telemetry, networking, camera access, image persistence.
 
@@ -26,9 +27,11 @@ Out of scope forever: contact databases, identity resolution/merging, relationsh
 
 ```sh
 swift build                 # compile
-swift test                  # all 86+ tests must pass
+swift test --no-parallel   # all tests must pass
 swift run card-field-eval Fixtures/Synthetic/public-alpha.json   # fixture eval
 swift run card-field-scan --help                            # CLI smoke test
+swift run card-field-benchmark --help                       # benchmark CLI smoke test
+swift run card-field-private-benchmark --help               # private holdout smoke test
 ```
 
 `Scripts/check-repository.sh` additionally requires [ripgrep](https://github.com/BurntSushi/ripgrep) (`rg`) for its credential scan and fails fast when it is missing.
@@ -54,8 +57,17 @@ Sources/
     ContributionSanitizer.swift  placeholder-based draft sanitizer
   AppleVisionAdapter/
     AppleVisionAdapter.swift configs, scanner, region selection, evidence, token mapping
+    ConditionalDualPass.swift default-off, fail-closed second-request experiment
     ImagePreprocessing.swift upscale/grayscale/contrast/sharpen pipeline + shared CIContext
+    ScanDiagnostics.swift opt-in redacted stage timings and Vision request counters
+  AppleVisionBenchmarking/
+    GoldenCorpus.swift deterministic 25-layout × 2-variant renderer and expectations
+    DiagnosticsBenchmark.swift aggregate-only latency/request benchmark contract
+    TargetedReRecognitionBenchmark.swift paired targeted-stage evidence report
+    PrivateHoldoutBenchmark.swift external-only aggregate private evaluator
   card-field-scan/main.swift CLI flags mirror scan configuration
+  card-field-benchmark/main.swift synthetic diagnostics benchmark CLI
+  card-field-private-benchmark/main.swift environment-gated private benchmark CLI
 Tests/
   CardFieldCoreTests/        classifier, fixtures, layout, language, encoding
   AppleVisionAdapterTests/   geometry, merging, preprocessing, E2E rendered cards, golden-scene regression corpus (Fixtures/GoldenScenes)
@@ -69,6 +81,7 @@ Docs/, Schemas/, Rules/, Fixtures/, Examples/
 - **Saliency fallback** candidates are capped at 0.75 confidence so real rectangle observations win ties, and still require the contact-text evidence gate.
 - **Shared CIContext** is `nonisolated(unsafe)` — Apple documents `CIContext` as thread-safe; recreating per scan dominates batch latency. Same escape hatch applies to precompiled regex statics.
 - **`OCRToken.alternatives`** decodes legacy JSON missing the key as `[]`; the default classifier consumes only `text`. The opt-in strict-field corrector may select one alternative only for email, explicit URL, or phone syntax under the fail-closed rules documented in `ARCHITECTURE.md`.
+- **Conditional dual-pass remains experimental and default OFF.** Full-image fallback, targeted recognition, weak or mixed-script text, complex/cropped layouts, strict alternative conflicts, and review warnings must retain the existing second request. Synthetic parity cannot promote it without the private holdout.
 
 ## Current status / open work
 

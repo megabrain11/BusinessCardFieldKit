@@ -8,6 +8,15 @@ The project follows [Semantic Versioning](https://semver.org/). Before `1.0.0`, 
 
 ### Added
 
+- A default-off `AppleVisionConditionalDualPassOptions` experiment that skips the second
+  language-correction pass only for high-confidence, single-script, simple-layout scans with
+  multiple complete strict-contact families and no conflicting alternatives, review warning,
+  crop edge, targeted request, or full-image fallback evidence. Diagnostics schema 2 reports
+  only fixed decision counts and request savings.
+- An environment-gated `card-field-private-benchmark` for transient real-photo holdouts. It uses
+  the shipped targeted re-recognition threshold, reads only one external corpus root, and emits
+  aggregate paired metrics with deterministic case-cluster bootstrap intervals and no source
+  identity or OCR content.
 - Local image-enhancement pipeline in the Apple Vision adapter: configurable upscaling to a
   minimum long edge, grayscale conversion, contrast adjustment, and unsharp-mask sharpening
   (`AppleVisionPreprocessingConfiguration`, `--no-preprocess`).
@@ -39,6 +48,8 @@ The project follows [Semantic Versioning](https://semver.org/). Before `1.0.0`, 
 
 ### Fixed
 
+- Email extraction now repairs OCR-introduced whitespace immediately around `@` while preserving
+  the original reading and preventing the domain portion from also becoming a website.
 - All Sources, Tests, and Package.swift files conform to strict `swift format lint` again after
   the OCR pipeline changes; formatting-only changes with no behavioral diff.
 

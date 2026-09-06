@@ -60,6 +60,31 @@ let asyncResult = try await scanner.scanTokensAsync(cgImage: pageCGImage)
 
 Reviewing, interpreting, classifying, storing, or transmitting the returned tokens is entirely the host's responsibility. The package performs no capture beyond the supplied image, retains no image after the call, persists no OCR text or results, and includes no networking or telemetry. Keep real document photos, OCR output, and personal values out of fixtures, documentation examples, and issue reports; use fictional placeholders such as `example.com` and `555` phone numbers.
 
+### Opt-in performance diagnostics
+
+Both result types can carry the same privacy-safe diagnostics payload. Collection is disabled by default:
+
+```swift
+var configuration = AppleVisionScanConfiguration()
+configuration.diagnostics = AppleVisionDiagnosticsOptions(isEnabled: true)
+
+let scanner = AppleVisionScanner(configuration: configuration)
+let result = try scanner.scan(cgImage: frontCGImage)
+let report = result.diagnostics
+```
+
+`AppleVisionScanDiagnostics` schema 2 reports a version, stage durations in fixed pipeline order, total and per-kind Vision request counts, whether dual-pass and targeted re-recognition were configured and executed, aggregate card-isolation/fallback flags, and fixed conditional dual-pass decision counts. `scanTokens` returns the same report without a classification stage. Legacy schema-1 payloads decode with conditional fields disabled and empty. The payload never contains OCR text, token values or confidence, geometry, image bytes, or filesystem paths, and the adapter does not log or persist it.
+
+Hosts may evaluate the fail-closed fast path without changing the shipped default:
+
+```swift
+configuration.conditionalDualPass = AppleVisionConditionalDualPassOptions(mode: .enabled)
+```
+
+The option never skips on full-image fallback or targeted re-recognition and rejects weak, mixed-script, multi-column, cropped, ambiguous, or review-recommended primary evidence. It is an experiment, not a production recommendation; keep it disabled until a private real-photo holdout confirms the synthetic result.
+
+The production clock records elapsed wall time. Repeated candidate scans accumulate under the same stage identifier, and targeted re-recognition is a containing span that can overlap its primary/secondary request spans; do not add stage durations to reconstruct total latency. Use multiple measured scans for percentiles. Tests can inject an `AppleVisionDiagnosticsClock` to make ordering and values deterministic. See [Adaptive OCR Diagnostics](ADAPTIVE_OCR_DIAGNOSTICS.md) for the contract, request arithmetic, and integration audit.
+
 Use `AppleVisionScanConfiguration` to select accurate or fast recognition, provide ordered BCP 47 language hints, enable automatic language detection and correction, set a minimum relative text height, or attach a host-provided language tag to emitted tokens. Vision does not expose a detected language for each recognized candidate, so `tokenLanguage` is only an explicit host hint.
 
 The scanner is synchronous and should run away from latency-sensitive UI work. It performs no capture, persistence, logging, or networking, and it retains no image after the call. It reports invalid encoded data, no recognized text, Vision failures, and classifier failures as `AppleVisionScanError` values.

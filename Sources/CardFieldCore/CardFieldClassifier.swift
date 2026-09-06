@@ -443,11 +443,12 @@ extension CardFieldClassifier {
   fileprivate func extractEmails(_ tokens: [OCRToken], consumed: inout Set<String>)
     -> [ClassifiedValue]
   {
-    let pattern = #"[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}"#
+    let pattern = #"[A-Z0-9._%+\-]+\s*@\s*[A-Z0-9.\-]+\.[A-Z]{2,}"#
     return regexValues(pattern, tokens: tokens, options: [.caseInsensitive]).map { match in
       consumed.insert(match.token.id)
+      let compactValue = match.value.filter { !$0.isWhitespace }
       return ClassifiedValue(
-        normalizedValue: match.value.lowercased(),
+        normalizedValue: compactValue.lowercased(),
         originalValue: match.value,
         confidence: 0.72 + match.token.confidence * 0.26,
         evidence: [.syntaxMatch],
@@ -636,6 +637,8 @@ extension CardFieldClassifier {
 
   fileprivate func isEmbeddedInEmail(_ match: RegexMatch) -> Bool {
     let text = match.token.text
+    let prefix = text[..<match.range.lowerBound].trimmingCharacters(in: .whitespacesAndNewlines)
+    if prefix.last == "@" { return true }
     let lowerBound =
       text[..<match.range.lowerBound].lastIndex(where: \Character.isWhitespace)
       .map { text.index(after: $0) } ?? text.startIndex

@@ -86,8 +86,11 @@ For a complete integration walkthrough, see the [CardFieldCore DocC catalog](Sou
 - `CardFieldCore`: contracts, normalization, rules, classification, confidence, evidence, corrections, sanitization, layout grouping, and script-based language inference
 - `AppleVisionAdapter`: locally enhances and recognizes a front image with Vision, converts observations into core tokens with alternative readings, and classifies them
 - `CardFieldEvaluation`: decodes synthetic fixtures and reports field-level precision and recall
+- `AppleVisionBenchmarking`: renders the versioned 25-layout × 2-variant synthetic image corpus and emits aggregate-only paired OCR diagnostics comparisons, including the default-off conditional dual-pass experiment
 - `card-field-eval`: command-line fixture runner
 - `card-field-scan`: local Apple-platform image scanner that emits structured JSON
+- `card-field-benchmark`: local Apple-platform benchmark for p50/p95 latency, request counts, execution rates, and exact-field parity without OCR payloads
+- `card-field-private-benchmark`: environment-gated real-photo holdout runner that emits aggregate-only paired evidence
 
 Run the package and evaluation suite:
 
@@ -95,7 +98,15 @@ Run the package and evaluation suite:
 swift test
 swift run card-field-eval Fixtures/Synthetic/phase1.json
 swift run card-field-scan --help
+swift run card-field-benchmark --help
+swift run card-field-private-benchmark --help
 ```
+
+Use `card-field-benchmark --targeted-evidence` with the separately versioned targeted stress manifest to compare targeted re-recognition enabled and disabled without changing scanner defaults. Reports remain aggregate-only and contain no OCR payloads or case identifiers.
+
+The regular benchmark interleaves shipped and conditional dual-pass scans per scene. The experiment remains disabled in `AppleVisionScanConfiguration` unless a host explicitly enables `AppleVisionConditionalDualPassOptions`; synthetic request savings are not a release recommendation.
+
+Private real-photo evaluation uses a separate external root and the shipped confidence threshold. See [Private Holdout Evaluation](Docs/PRIVATE_HOLDOUT_EVALUATION.md). No private image, expected value, filename, path, or per-case output belongs in this repository.
 
 ## Rules and corrections
 
@@ -123,6 +134,7 @@ A CRM such as Relationship Memory can reuse the public interpretation contracts,
 
 - [Architecture](ARCHITECTURE.md)
 - [Local image scanning](Docs/IMAGE_SCANNING.md)
+- [Private holdout evaluation](Docs/PRIVATE_HOLDOUT_EVALUATION.md)
 - [AI collaboration handoff](Docs/AI_COLLABORATION.md)
 - [Roadmap](ROADMAP.md)
 - [Changelog](CHANGELOG.md)
