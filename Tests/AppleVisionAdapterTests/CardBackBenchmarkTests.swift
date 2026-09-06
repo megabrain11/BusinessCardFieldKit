@@ -294,6 +294,87 @@ import Testing
     #expect(!skipped.contains("PRIVATE_CARD_BACK_CORPUS_ROOT"))
   }
 
+  @Test("Private projective masking experiment emits redacted paired evidence")
+  func privateProjectiveMaskingExperiment() throws {
+    let synthetic = try #require(
+      try cardBackManifest().cases.first {
+        $0.identifier == "back-isolated-perspective-nearby-text"
+      }
+    )
+    let root = FileManager.default.temporaryDirectory
+      .appendingPathComponent(UUID().uuidString, isDirectory: true)
+    try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: root) }
+    try writePNG(
+      CardBackSceneRenderer.render(synthetic),
+      to: root.appendingPathComponent("private-scene.png")
+    )
+    let manifest = try PrivateCardBackManifest(
+      data: privateManifestData(
+        image: "private-scene.png",
+        expectedPayloadKinds: synthetic.expectedPayloadKinds.map(\.rawValue),
+        backExpected: synthetic.backExpected,
+        mergedExpected: synthetic.mergedExpected,
+        reviewExpected: synthetic.reviewExpected,
+        attemptsCardIsolation: true
+      )
+    )
+    let comparison = try PrivateCardBackBenchmarkRunner(warmupRuns: 0, measuredRuns: 3)
+      .runMaskingExperiment(manifest: manifest, root: root)
+
+    #expect(comparison.caseCount == 1)
+    #expect(comparison.measuredRuns == 3)
+    #expect(comparison.corpusVersion == nil)
+    #expect(comparison.evidenceAssessment == .privateAggregateAvailable)
+    #expect(comparison.resultParityRate == 1)
+    #expect(comparison.tokenParityRate == 1)
+    #expect(comparison.fieldParityRate == 1)
+    #expect(comparison.barcodeParityRate == 1)
+    #expect(comparison.cardRegionParityRate == 1)
+    #expect(comparison.isolatedSampleCount == 3)
+    #expect(comparison.projectiveMaskingAppliedSampleCount == 3)
+    #expect(comparison.projectiveMaskFallbackCount == 0)
+    #expect(comparison.isolatedBarcodeRequestReduction.p50 == 1)
+    #expect(comparison.isolatedBarcodeRequestReduction.p95 == 1)
+    #expect(comparison.durationDeltaMilliseconds.sampleCount == 3)
+
+    let envelope = PrivateCardBackCommandReport.completedMaskingComparison(comparison)
+    let json = try #require(String(data: JSONEncoder().encode(envelope), encoding: .utf8))
+    #expect(!json.contains("private-scene.png"))
+    #expect(!json.contains("nearby@example.net"))
+    #expect(!json.contains(root.path))
+    #expect(!json.contains("PRIVATE_CARD_BACK_CORPUS_ROOT"))
+    #expect(json.contains("privateAggregateAvailable"))
+  }
+
+  @Test("Private report decodes legacy envelopes without masking comparison")
+  func privateReportLegacyDecoding() throws {
+    let data = Data(
+      """
+      {"reportSchemaVersion":1,"status":"skipped","skipReason":"privateCorpusUnavailable"}
+      """.utf8
+    )
+    let report = try JSONDecoder().decode(PrivateCardBackCommandReport.self, from: data)
+    #expect(report == .skipped)
+    #expect(report.maskingComparison == nil)
+  }
+
+  @Test("Private projective masking experiment requires three measured runs")
+  func privateProjectiveMaskingRunCount() throws {
+    let root = FileManager.default.temporaryDirectory
+      .appendingPathComponent(UUID().uuidString, isDirectory: true)
+    try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: root) }
+    try Data([0]).write(to: root.appendingPathComponent("sample.png"))
+    let manifest = try PrivateCardBackManifest(
+      data: privateManifestData(image: "sample.png", expectedKey: "websites")
+    )
+    #expect(throws: CardBackBenchmarkError.invalidRunCount) {
+      try PrivateCardBackBenchmarkRunner(warmupRuns: 0, measuredRuns: 2)
+        .runMaskingExperiment(manifest: manifest, root: root)
+    }
+  }
+
   private func cardBackManifest() throws -> CardBackCorpusManifest {
     try CardBackCorpusManifest(
       data: Data(
@@ -358,7 +439,8 @@ import Testing
     expectedPayloadKinds: [String],
     backExpected: [String: [String]],
     mergedExpected: [String: [String]],
-    reviewExpected: Bool
+    reviewExpected: Bool,
+    attemptsCardIsolation: Bool = false
   ) throws -> Data {
     try JSONSerialization.data(withJSONObject: [
       "schemaVersion": 1,
@@ -369,7 +451,7 @@ import Testing
           "backExpected": backExpected,
           "mergedExpected": mergedExpected,
           "reviewExpected": reviewExpected,
-          "attemptsCardIsolation": false,
+          "attemptsCardIsolation": attemptsCardIsolation,
         ]
       ],
     ])

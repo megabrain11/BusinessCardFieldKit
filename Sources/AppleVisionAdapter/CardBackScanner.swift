@@ -95,13 +95,16 @@ import Foundation
     ) throws -> AppleVisionBackScanResult {
       let instrumentation = makeInstrumentation()
       let decoded = try measure(.sourceBarcodeDetection, instrumentation: instrumentation) {
-        instrumentation?.recordSourceBarcodeRequest()
-        return try decodedBarcodes(in: cgImage, orientation: orientation)
+        try decodedBarcodes(
+          in: cgImage,
+          orientation: orientation,
+          instrumentation: instrumentation
+        )
       }
       let textResult = try textScan(
         cgImage: cgImage,
         orientation: orientation,
-        barcodeRegions: decoded.map(\.metadata.boundingBox),
+        barcodes: decoded,
         instrumentation: instrumentation
       )
       let fields = try measure(.classificationAndMerge, instrumentation: instrumentation) {
@@ -138,7 +141,10 @@ import Foundation
 
     private func makeInstrumentation() -> BackScanInstrumentation? {
       guard configuration.diagnostics.isEnabled else { return nil }
-      return BackScanInstrumentation(clock: configuration.diagnostics.clock)
+      return BackScanInstrumentation(
+        clock: configuration.diagnostics.clock,
+        maskingStrategy: configuration.barcodeMaskingStrategy
+      )
     }
 
     private func measure<T>(
@@ -153,7 +159,7 @@ import Foundation
     private func textScan(
       cgImage: CGImage,
       orientation: CGImagePropertyOrientation,
-      barcodeRegions: [NormalizedBoundingBox],
+      barcodes: [DecodedBarcode],
       instrumentation: BackScanInstrumentation?
     ) throws -> BackTextResult? {
       do {
@@ -168,18 +174,13 @@ import Foundation
         let recognized = prepared.result
         let maskingRegions: [NormalizedBoundingBox]
         if case .isolated = recognized.cardRegionSelection {
-          maskingRegions = try measure(
-            .isolatedMaskDetection,
+          maskingRegions = try isolatedMaskingRegions(
+            barcodes: barcodes,
+            prepared: prepared,
             instrumentation: instrumentation
-          ) {
-            instrumentation?.recordIsolatedMaskBarcodeRequest()
-            return try detectedBarcodeRegions(
-              in: prepared.recognitionImage,
-              orientation: .up
-            )
-          }
+          )
         } else {
-          maskingRegions = barcodeRegions
+          maskingRegions = barcodes.map(\.metadata.boundingBox)
         }
         let tokens = Self.tokensOutsideBarcodeRegions(
           recognized.tokens,
@@ -189,8 +190,36 @@ import Foundation
           tokens: tokens,
           cardRegionSelection: recognized.cardRegionSelection
         )
-      } catch AppleVisionScanError.noRecognizedText where !barcodeRegions.isEmpty {
+      } catch AppleVisionScanError.noRecognizedText where !barcodes.isEmpty {
         return nil
+      }
+    }
+
+    private func isolatedMaskingRegions(
+      barcodes: [DecodedBarcode],
+      prepared: TokenScanWithRecognitionImage,
+      instrumentation: BackScanInstrumentation?
+    ) throws -> [NormalizedBoundingBox] {
+      if configuration.barcodeMaskingStrategy == .projectiveSourceObservation,
+        let card = prepared.cardRegionQuadrilateral,
+        let mapped = ProjectiveBarcodeMaskMapper.regions(
+          barcodes: barcodes.map(\.quadrilateral),
+          card: card
+        )
+      {
+        instrumentation?.recordProjectiveMaskApplied()
+        return mapped
+      }
+
+      if configuration.barcodeMaskingStrategy == .projectiveSourceObservation {
+        instrumentation?.recordProjectiveMaskFallback()
+      }
+      return try measure(.isolatedMaskDetection, instrumentation: instrumentation) {
+        instrumentation?.recordIsolatedMaskBarcodeRequest()
+        return try detectedBarcodeRegions(
+          in: prepared.recognitionImage,
+          orientation: .up
+        )
       }
     }
 
@@ -228,34 +257,58 @@ import Foundation
 
     private func decodedBarcodes(
       in image: CGImage,
-      orientation: CGImagePropertyOrientation
+      orientation: CGImagePropertyOrientation,
+      instrumentation: BackScanInstrumentation?
     ) throws -> [DecodedBarcode] {
-      try barcodeObservations(in: image, orientation: orientation)
-        .sorted(by: Self.barcodeReadingOrder)
-        .enumerated()
-        .map { offset, observation in
-          let payload = observation.payloadStringValue ?? ""
-          let fields: CardFieldResult?
-          let kind: AppleVisionDetectedBarcode.PayloadKind
-          if payload.uppercased().hasPrefix("BEGIN:VCARD") {
-            fields = (try? vCardParser.parse(payload))?.rebasingBarcodeSources(offset + 1)
-            kind = fields == nil ? .unsupported : .vCard
-          } else if Self.isExplicitURL(payload) {
-            fields = Self.urlFields(payload, barcodeIndex: offset + 1)
-            kind = .url
-          } else {
-            fields = nil
-            kind = .unsupported
-          }
-          return DecodedBarcode(
-            metadata: AppleVisionDetectedBarcode(
-              symbology: observation.symbology.rawValue,
-              payloadKind: kind,
-              boundingBox: Self.normalizedBox(observation.boundingBox)
-            ),
-            fields: fields
-          )
+      try sourceBarcodeObservations(
+        in: image,
+        orientation: orientation,
+        instrumentation: instrumentation
+      )
+      .sorted(by: Self.barcodeReadingOrder)
+      .enumerated()
+      .map { offset, observation in
+        let payload = observation.payloadStringValue ?? ""
+        let fields: CardFieldResult?
+        let kind: AppleVisionDetectedBarcode.PayloadKind
+        if payload.uppercased().hasPrefix("BEGIN:VCARD") {
+          fields = (try? vCardParser.parse(payload))?.rebasingBarcodeSources(offset + 1)
+          kind = fields == nil ? .unsupported : .vCard
+        } else if Self.isExplicitURL(payload) {
+          fields = Self.urlFields(payload, barcodeIndex: offset + 1)
+          kind = .url
+        } else {
+          fields = nil
+          kind = .unsupported
         }
+        return DecodedBarcode(
+          metadata: AppleVisionDetectedBarcode(
+            symbology: observation.symbology.rawValue,
+            payloadKind: kind,
+            boundingBox: Self.normalizedBox(observation.boundingBox)
+          ),
+          fields: fields,
+          quadrilateral: BarcodeMaskQuadrilateral(observation)
+        )
+      }
+    }
+
+    private func sourceBarcodeObservations(
+      in image: CGImage,
+      orientation: CGImagePropertyOrientation,
+      instrumentation: BackScanInstrumentation?
+    ) throws -> [VNBarcodeObservation] {
+      instrumentation?.recordSourceBarcodeRequest()
+      let initial = try barcodeObservations(in: image, orientation: orientation)
+      guard initial.isEmpty, configuration.barcodeDetectionRecovery.isEnabled,
+        let recoveredImage = BarcodeDetectionRecoveryPreprocessor.preprocess(
+          image,
+          options: configuration.barcodeDetectionRecovery
+        )
+      else { return initial }
+
+      instrumentation?.recordSourceBarcodeRecoveryRequest()
+      return (try? barcodeObservations(in: recoveredImage, orientation: orientation)) ?? initial
     }
 
     private func detectedBarcodeRegions(
@@ -344,6 +397,7 @@ import Foundation
     private struct DecodedBarcode {
       var metadata: AppleVisionDetectedBarcode
       var fields: CardFieldResult?
+      var quadrilateral: BarcodeMaskQuadrilateral
     }
 
     private struct BackTextResult {

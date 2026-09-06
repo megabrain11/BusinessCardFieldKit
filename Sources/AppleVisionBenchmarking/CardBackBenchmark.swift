@@ -48,9 +48,15 @@ import Foundation
   public enum CardBackLayout: String, Decodable, Sendable {
     case standard
     case small
+    case tiny
     case lowContrast
+    case veryLowContrast
+    case blurred
+    case centerOverlay
+    case dotStyle
     case rotated
     case perspective
+    case strongPerspective
     case multiple
     case textAndQR
     case isolatedPerspective
@@ -92,15 +98,27 @@ import Foundation
       let frames = frames(for: record.layout, count: record.payloads.count)
       for pair in zip(record.payloads, frames) {
         let (payload, frame) = pair
-        let lowContrast = record.layout == .lowContrast
-        let qr = try qrCode(
+        let qr = try styledQRCode(
           payload.value,
-          darkGray: lowContrast ? 0.42 : 0,
-          lightGray: lowContrast ? 0.92 : 1
+          layout: record.layout
         )
         draw(qr, in: frame, layout: record.layout, context: context)
+        if record.layout == .centerOverlay {
+          let side = frame.width * 0.36
+          let overlay = CGRect(
+            x: frame.midX - side / 2,
+            y: frame.midY - side / 2,
+            width: side,
+            height: side
+          )
+          context.setFillColor(CGColor(gray: 0.96, alpha: 1))
+          context.fillEllipse(in: overlay)
+          context.setStrokeColor(CGColor(gray: 0.25, alpha: 1))
+          context.setLineWidth(4)
+          context.strokeEllipse(in: overlay.insetBy(dx: 3, dy: 3))
+        }
       }
-      if record.layout == .textAndQR {
+      if !(record.auxiliaryLines ?? []).isEmpty {
         drawLines(record.auxiliaryLines ?? [], in: context, canvasSize: canvasSize)
       }
       guard let image = context.makeImage() else {
@@ -121,6 +139,14 @@ import Foundation
       switch layout {
       case .small:
         frame = CGRect(x: 485, y: 285, width: 230, height: 230)
+      case .tiny:
+        frame = CGRect(x: 570, y: 370, width: 60, height: 60)
+      case .veryLowContrast:
+        frame = CGRect(x: 510, y: 310, width: 180, height: 180)
+      case .blurred:
+        frame = CGRect(x: 520, y: 320, width: 160, height: 160)
+      case .centerOverlay, .dotStyle, .strongPerspective:
+        frame = CGRect(x: 460, y: 260, width: 280, height: 280)
       case .textAndQR:
         frame = CGRect(x: 745, y: 190, width: 390, height: 390)
       case .standard, .lowContrast, .rotated, .perspective, .multiple,
@@ -128,6 +154,44 @@ import Foundation
         frame = CGRect(x: 370, y: 170, width: 460, height: 460)
       }
       return Array(repeating: frame, count: count)
+    }
+
+    private static func styledQRCode(
+      _ payload: String,
+      layout: CardBackLayout
+    ) throws -> CGImage {
+      let colors: (dark: CGFloat, light: CGFloat)
+      switch layout {
+      case .lowContrast:
+        colors = (0.42, 0.92)
+      case .veryLowContrast:
+        colors = (0.66, 0.76)
+      default:
+        colors = (0, 1)
+      }
+      var image = CIImage(
+        cgImage: try qrCode(
+          payload,
+          darkGray: colors.dark,
+          lightGray: colors.light
+        )
+      )
+      let originalExtent = image.extent
+      if layout == .dotStyle {
+        image = image.applyingFilter(
+          "CIMorphologyMaximum",
+          parameters: ["inputRadius": 4.5]
+        ).cropped(to: originalExtent)
+      } else if layout == .blurred {
+        image = image.applyingFilter(
+          "CIGaussianBlur",
+          parameters: [kCIInputRadiusKey: 3.4]
+        ).cropped(to: originalExtent)
+      }
+      guard let output = CIContext().createCGImage(image, from: originalExtent.integral) else {
+        throw CardBackBenchmarkError.failedToCreateImage
+      }
+      return output
     }
 
     private static func qrCode(
@@ -176,10 +240,39 @@ import Foundation
             x: -frame.width / 2, y: -frame.height / 2, width: frame.width, height: frame.height))
       } else if layout == .perspective {
         context.draw(perspectiveImage(image) ?? image, in: frame)
+      } else if layout == .strongPerspective {
+        context.draw(strongPerspectiveImage(image) ?? image, in: frame)
       } else {
         context.draw(image, in: frame)
       }
       context.restoreGState()
+    }
+
+    private static func strongPerspectiveImage(_ image: CGImage) -> CGImage? {
+      let input = CIImage(cgImage: image)
+      let extent = input.extent
+      let output = input.applyingFilter(
+        "CIPerspectiveTransform",
+        parameters: [
+          "inputTopLeft": CIVector(
+            x: extent.minX + extent.width * 0.28,
+            y: extent.maxY - extent.height * 0.04
+          ),
+          "inputTopRight": CIVector(
+            x: extent.maxX - extent.width * 0.02,
+            y: extent.maxY - extent.height * 0.38
+          ),
+          "inputBottomRight": CIVector(
+            x: extent.maxX - extent.width * 0.28,
+            y: extent.minY + extent.height * 0.18
+          ),
+          "inputBottomLeft": CIVector(
+            x: extent.minX + extent.width * 0.02,
+            y: extent.minY + extent.height * 0.02
+          ),
+        ]
+      )
+      return CIContext().createCGImage(output, from: output.extent.integral)
     }
 
     private static func perspectiveImage(_ image: CGImage) -> CGImage? {
@@ -512,28 +605,53 @@ import Foundation
       )
     }
 
-    func scan(_ record: CardBackCorpusCase, image: CGImage) throws -> CardBackBenchmarkSample {
+    func scan(
+      _ record: CardBackCorpusCase,
+      image: CGImage,
+      maskingStrategy: AppleVisionBarcodeMaskingStrategy = .rectifiedRedetection
+    ) throws -> CardBackBenchmarkSample {
+      let measured = try scanResult(
+        record,
+        image: image,
+        maskingStrategy: maskingStrategy
+      )
+      return Self.sample(
+        detected: measured.result,
+        expectedPayloadKinds: record.expectedPayloadKinds,
+        backExpected: record.backExpected,
+        front: record.front ?? [:],
+        mergedExpected: record.mergedExpected,
+        reviewExpected: record.reviewExpected,
+        attemptsCardIsolation: measured.attemptsIsolation,
+        durationMilliseconds: measured.durationMilliseconds,
+        tags: record.tags
+      )
+    }
+
+    func scanResult(
+      _ record: CardBackCorpusCase,
+      image: CGImage,
+      maskingStrategy: AppleVisionBarcodeMaskingStrategy = .rectifiedRedetection,
+      barcodeDetectionRecovery: AppleVisionBarcodeDetectionRecoveryOptions =
+        AppleVisionBarcodeDetectionRecoveryOptions()
+    ) throws -> (
+      result: AppleVisionBackScanResult,
+      durationMilliseconds: Double,
+      attemptsIsolation: Bool
+    ) {
       let start = ContinuousClock.now
       let attemptsIsolation = record.attemptsCardIsolation ?? false
       var configuration = Self.scanConfiguration(
-        attemptsCardIsolation: attemptsIsolation
+        attemptsCardIsolation: attemptsIsolation,
+        maskingStrategy: maskingStrategy,
+        barcodeDetectionRecovery: barcodeDetectionRecovery
       )
       configuration.diagnostics = AppleVisionDiagnosticsOptions(isEnabled: true)
       let result = try CardBackScanner(
         configuration: configuration
       ).scan(cgImage: image)
       let duration = milliseconds(start.duration(to: .now))
-      return Self.sample(
-        detected: result,
-        expectedPayloadKinds: record.expectedPayloadKinds,
-        backExpected: record.backExpected,
-        front: record.front ?? [:],
-        mergedExpected: record.mergedExpected,
-        reviewExpected: record.reviewExpected,
-        attemptsCardIsolation: attemptsIsolation,
-        durationMilliseconds: duration,
-        tags: record.tags
-      )
+      return (result, duration, attemptsIsolation)
     }
 
     static func sample(
@@ -574,7 +692,10 @@ import Foundation
     }
 
     static func scanConfiguration(
-      attemptsCardIsolation: Bool
+      attemptsCardIsolation: Bool,
+      maskingStrategy: AppleVisionBarcodeMaskingStrategy = .rectifiedRedetection,
+      barcodeDetectionRecovery: AppleVisionBarcodeDetectionRecoveryOptions =
+        AppleVisionBarcodeDetectionRecoveryOptions()
     ) -> AppleVisionScanConfiguration {
       AppleVisionScanConfiguration(
         recognitionLanguages: ["ko-KR", "en-US"],
@@ -584,7 +705,9 @@ import Foundation
         ),
         preprocessing: AppleVisionPreprocessingConfiguration(isEnabled: false),
         dualPassRecognition: false,
-        performsTargetedReRecognition: false
+        performsTargetedReRecognition: false,
+        barcodeMaskingStrategy: maskingStrategy,
+        barcodeDetectionRecovery: barcodeDetectionRecovery
       )
     }
 

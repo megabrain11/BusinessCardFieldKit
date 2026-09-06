@@ -12,6 +12,8 @@ struct BenchmarkArguments {
   var prettyPrinted: Bool
   var targetedEvidence: Bool
   var cardBackEvidence: Bool
+  var cardBackMaskExperiment: Bool
+  var barcodeDetectionRecoveryExperiment: Bool
 
   static func parse(_ arguments: [String]) throws -> Self {
     var manifestPath: String?
@@ -20,6 +22,8 @@ struct BenchmarkArguments {
     var prettyPrinted = false
     var targetedEvidence = false
     var cardBackEvidence = false
+    var cardBackMaskExperiment = false
+    var barcodeDetectionRecoveryExperiment = false
     var index = 0
 
     while index < arguments.count {
@@ -42,6 +46,10 @@ struct BenchmarkArguments {
         targetedEvidence = true
       case "--card-back-evidence":
         cardBackEvidence = true
+      case "--card-back-mask-experiment":
+        cardBackMaskExperiment = true
+      case "--barcode-detection-recovery-experiment":
+        barcodeDetectionRecoveryExperiment = true
       case "--help", "-h":
         throw ArgumentError.helpRequested
       default:
@@ -60,7 +68,9 @@ struct BenchmarkArguments {
       measuredRuns: measuredRuns,
       prettyPrinted: prettyPrinted,
       targetedEvidence: targetedEvidence,
-      cardBackEvidence: cardBackEvidence
+      cardBackEvidence: cardBackEvidence,
+      cardBackMaskExperiment: cardBackMaskExperiment,
+      barcodeDetectionRecoveryExperiment: barcodeDetectionRecoveryExperiment
     )
   }
 }
@@ -73,11 +83,13 @@ enum ArgumentError: Error {
 }
 
 let usage = """
-  Usage: card-field-benchmark [--warmup N] [--runs N] [--pretty] [--targeted-evidence | --card-back-evidence] MANIFEST
+  Usage: card-field-benchmark [--warmup N] [--runs N] [--pretty] [--targeted-evidence | --card-back-evidence | --card-back-mask-experiment | --barcode-detection-recovery-experiment] MANIFEST
 
   Runs aggregate-only OCR diagnostics over a synthetic manifest.
   --targeted-evidence compares targeted re-recognition enabled versus disabled.
   --card-back-evidence evaluates QR/vCard detection, merging, and latency.
+  --card-back-mask-experiment pairs rectified redetection with exact projective source mapping.
+  --barcode-detection-recovery-experiment pairs source detection with a default-off empty-result retry.
   The JSON report contains no OCR text, token values, images, or source paths.
   """
 
@@ -87,10 +99,26 @@ do {
   let encoder = JSONEncoder()
   encoder.outputFormatting =
     arguments.prettyPrinted ? [.prettyPrinted, .sortedKeys] : [.sortedKeys]
-  if arguments.targetedEvidence && arguments.cardBackEvidence {
+  if [
+    arguments.targetedEvidence, arguments.cardBackEvidence, arguments.cardBackMaskExperiment,
+    arguments.barcodeDetectionRecoveryExperiment,
+  ]
+  .filter({ $0 }).count > 1 {
     throw ArgumentError.unexpectedArgument("Conflicting evidence modes")
   } else if arguments.cardBackEvidence {
     let report = try CardBackBenchmarkRunner(
+      warmupRuns: arguments.warmupRuns,
+      measuredRuns: arguments.measuredRuns
+    ).run(manifest: CardBackCorpusManifest(data: data))
+    FileHandle.standardOutput.write(try encoder.encode(report))
+  } else if arguments.cardBackMaskExperiment {
+    let report = try CardBackMaskingStrategyBenchmarkRunner(
+      warmupRuns: arguments.warmupRuns,
+      measuredRuns: arguments.measuredRuns
+    ).run(manifest: CardBackCorpusManifest(data: data))
+    FileHandle.standardOutput.write(try encoder.encode(report))
+  } else if arguments.barcodeDetectionRecoveryExperiment {
+    let report = try BarcodeDetectionRecoveryBenchmarkRunner(
       warmupRuns: arguments.warmupRuns,
       measuredRuns: arguments.measuredRuns
     ).run(manifest: CardBackCorpusManifest(data: data))

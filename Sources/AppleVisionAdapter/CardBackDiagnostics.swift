@@ -24,32 +24,98 @@ import Foundation
   /// Opt-in, content-free diagnostics for one completed card-back scan.
   ///
   /// The contract contains only durations, fixed request counts, and one
-  /// execution boolean. It never contains payloads, OCR text, image data,
+  /// execution booleans. It never contains payloads, OCR text, image data,
   /// geometry, token values, or paths.
   public struct AppleVisionBackScanDiagnostics: Codable, Equatable, Sendable {
-    public static let currentSchemaVersion = 1
+    public static let currentSchemaVersion = 2
 
     public var schemaVersion: Int
     public var stageTimings: [AppleVisionBackStageTiming]
     public var totalBarcodeRequestCount: Int
     public var sourceBarcodeRequestCount: Int
+    public var sourceBarcodeRecoveryRequestCount: Int
+    public var sourceBarcodeRecoveryExecuted: Bool
     public var isolatedMaskBarcodeRequestCount: Int
     public var isolatedMaskDetectionExecuted: Bool
+    public var maskingStrategy: AppleVisionBarcodeMaskingStrategy
+    public var projectiveMaskingApplied: Bool
+    public var projectiveMaskFallbackCount: Int
 
     public init(
       schemaVersion: Int = AppleVisionBackScanDiagnostics.currentSchemaVersion,
       stageTimings: [AppleVisionBackStageTiming],
       totalBarcodeRequestCount: Int,
       sourceBarcodeRequestCount: Int,
+      sourceBarcodeRecoveryRequestCount: Int = 0,
+      sourceBarcodeRecoveryExecuted: Bool = false,
       isolatedMaskBarcodeRequestCount: Int,
-      isolatedMaskDetectionExecuted: Bool
+      isolatedMaskDetectionExecuted: Bool,
+      maskingStrategy: AppleVisionBarcodeMaskingStrategy = .rectifiedRedetection,
+      projectiveMaskingApplied: Bool = false,
+      projectiveMaskFallbackCount: Int = 0
     ) {
       self.schemaVersion = schemaVersion
       self.stageTimings = stageTimings
       self.totalBarcodeRequestCount = max(totalBarcodeRequestCount, 0)
       self.sourceBarcodeRequestCount = max(sourceBarcodeRequestCount, 0)
+      self.sourceBarcodeRecoveryRequestCount = max(sourceBarcodeRecoveryRequestCount, 0)
+      self.sourceBarcodeRecoveryExecuted = sourceBarcodeRecoveryExecuted
       self.isolatedMaskBarcodeRequestCount = max(isolatedMaskBarcodeRequestCount, 0)
       self.isolatedMaskDetectionExecuted = isolatedMaskDetectionExecuted
+      self.maskingStrategy = maskingStrategy
+      self.projectiveMaskingApplied = projectiveMaskingApplied
+      self.projectiveMaskFallbackCount = max(projectiveMaskFallbackCount, 0)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+      case schemaVersion
+      case stageTimings
+      case totalBarcodeRequestCount
+      case sourceBarcodeRequestCount
+      case sourceBarcodeRecoveryRequestCount
+      case sourceBarcodeRecoveryExecuted
+      case isolatedMaskBarcodeRequestCount
+      case isolatedMaskDetectionExecuted
+      case maskingStrategy
+      case projectiveMaskingApplied
+      case projectiveMaskFallbackCount
+    }
+
+    public init(from decoder: Decoder) throws {
+      let container = try decoder.container(keyedBy: CodingKeys.self)
+      self.init(
+        schemaVersion: try container.decode(Int.self, forKey: .schemaVersion),
+        stageTimings: try container.decode(
+          [AppleVisionBackStageTiming].self, forKey: .stageTimings
+        ),
+        totalBarcodeRequestCount: try container.decode(
+          Int.self, forKey: .totalBarcodeRequestCount
+        ),
+        sourceBarcodeRequestCount: try container.decode(
+          Int.self, forKey: .sourceBarcodeRequestCount
+        ),
+        sourceBarcodeRecoveryRequestCount: try container.decodeIfPresent(
+          Int.self, forKey: .sourceBarcodeRecoveryRequestCount
+        ) ?? 0,
+        sourceBarcodeRecoveryExecuted: try container.decodeIfPresent(
+          Bool.self, forKey: .sourceBarcodeRecoveryExecuted
+        ) ?? false,
+        isolatedMaskBarcodeRequestCount: try container.decode(
+          Int.self, forKey: .isolatedMaskBarcodeRequestCount
+        ),
+        isolatedMaskDetectionExecuted: try container.decode(
+          Bool.self, forKey: .isolatedMaskDetectionExecuted
+        ),
+        maskingStrategy: try container.decodeIfPresent(
+          AppleVisionBarcodeMaskingStrategy.self, forKey: .maskingStrategy
+        ) ?? .rectifiedRedetection,
+        projectiveMaskingApplied: try container.decodeIfPresent(
+          Bool.self, forKey: .projectiveMaskingApplied
+        ) ?? false,
+        projectiveMaskFallbackCount: try container.decodeIfPresent(
+          Int.self, forKey: .projectiveMaskFallbackCount
+        ) ?? 0
+      )
     }
   }
 
@@ -59,11 +125,19 @@ import Foundation
     private let startedAt: Double
     private var durations: [AppleVisionBackScanStage: Double] = [:]
     private var sourceBarcodeRequests = 0
+    private var sourceBarcodeRecoveryRequests = 0
     private var isolatedMaskBarcodeRequests = 0
+    private let maskingStrategy: AppleVisionBarcodeMaskingStrategy
+    private var projectiveMaskingApplied = false
+    private var projectiveMaskFallbacks = 0
 
-    init(clock: any AppleVisionDiagnosticsClock) {
+    init(
+      clock: any AppleVisionDiagnosticsClock,
+      maskingStrategy: AppleVisionBarcodeMaskingStrategy = .rectifiedRedetection
+    ) {
       self.clock = clock
       self.startedAt = clock.nowMilliseconds()
+      self.maskingStrategy = maskingStrategy
     }
 
     func measure<T>(
@@ -86,9 +160,28 @@ import Foundation
       lock.unlock()
     }
 
+    func recordSourceBarcodeRecoveryRequest() {
+      lock.lock()
+      sourceBarcodeRequests += 1
+      sourceBarcodeRecoveryRequests += 1
+      lock.unlock()
+    }
+
     func recordIsolatedMaskBarcodeRequest() {
       lock.lock()
       isolatedMaskBarcodeRequests += 1
+      lock.unlock()
+    }
+
+    func recordProjectiveMaskApplied() {
+      lock.lock()
+      projectiveMaskingApplied = true
+      lock.unlock()
+    }
+
+    func recordProjectiveMaskFallback() {
+      lock.lock()
+      projectiveMaskFallbacks += 1
       lock.unlock()
     }
 
@@ -111,8 +204,13 @@ import Foundation
         stageTimings: timings,
         totalBarcodeRequestCount: sourceBarcodeRequests + isolatedMaskBarcodeRequests,
         sourceBarcodeRequestCount: sourceBarcodeRequests,
+        sourceBarcodeRecoveryRequestCount: sourceBarcodeRecoveryRequests,
+        sourceBarcodeRecoveryExecuted: sourceBarcodeRecoveryRequests > 0,
         isolatedMaskBarcodeRequestCount: isolatedMaskBarcodeRequests,
-        isolatedMaskDetectionExecuted: isolatedMaskBarcodeRequests > 0
+        isolatedMaskDetectionExecuted: isolatedMaskBarcodeRequests > 0,
+        maskingStrategy: maskingStrategy,
+        projectiveMaskingApplied: projectiveMaskingApplied,
+        projectiveMaskFallbackCount: projectiveMaskFallbacks
       )
     }
   }

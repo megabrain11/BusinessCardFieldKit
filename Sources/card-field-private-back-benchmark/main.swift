@@ -9,11 +9,13 @@ struct PrivateBackArguments {
   var warmupRuns: Int
   var measuredRuns: Int
   var prettyPrinted: Bool
+  var projectiveMaskExperiment: Bool
 
   static func parse(_ arguments: [String]) throws -> Self {
     var warmupRuns = 1
     var measuredRuns = 3
     var prettyPrinted = false
+    var projectiveMaskExperiment = false
     var index = 0
     while index < arguments.count {
       switch arguments[index] {
@@ -31,6 +33,8 @@ struct PrivateBackArguments {
         measuredRuns = value
       case "--pretty":
         prettyPrinted = true
+      case "--projective-mask-experiment":
+        projectiveMaskExperiment = true
       case "--help", "-h":
         throw PrivateBackArgumentError.helpRequested
       default:
@@ -41,7 +45,8 @@ struct PrivateBackArguments {
     return Self(
       warmupRuns: warmupRuns,
       measuredRuns: measuredRuns,
-      prettyPrinted: prettyPrinted
+      prettyPrinted: prettyPrinted,
+      projectiveMaskExperiment: projectiveMaskExperiment
     )
   }
 }
@@ -53,11 +58,12 @@ enum PrivateBackArgumentError: Error {
 }
 
 let usage = """
-  Usage: card-field-private-back-benchmark [--warmup N] [--runs N] [--pretty]
+  Usage: card-field-private-back-benchmark [--warmup N] [--runs N] [--pretty] [--projective-mask-experiment]
 
   Reads manifest.json and its images only from PRIVATE_CARD_BACK_CORPUS_ROOT.
   Missing configuration emits a redacted skipped report and exits successfully.
   Completed reports contain aggregate metrics only, never payload, OCR, image, path, or case identity.
+  --projective-mask-experiment alternates default/projective scans and reports aggregate parity and cost deltas.
   """
 
 func write(_ report: PrivateCardBackCommandReport, pretty: Bool) throws {
@@ -79,11 +85,17 @@ do {
   let manifest = try PrivateCardBackManifest(
     data: Data(contentsOf: root.appendingPathComponent("manifest.json"))
   )
-  let report = try PrivateCardBackBenchmarkRunner(
+  let runner = PrivateCardBackBenchmarkRunner(
     warmupRuns: arguments.warmupRuns,
     measuredRuns: arguments.measuredRuns
-  ).run(manifest: manifest, root: root)
-  try write(.completed(report), pretty: arguments.prettyPrinted)
+  )
+  if arguments.projectiveMaskExperiment {
+    let comparison = try runner.runMaskingExperiment(manifest: manifest, root: root)
+    try write(.completedMaskingComparison(comparison), pretty: arguments.prettyPrinted)
+  } else {
+    let report = try runner.run(manifest: manifest, root: root)
+    try write(.completed(report), pretty: arguments.prettyPrinted)
+  }
 } catch PrivateBackArgumentError.helpRequested {
   print(usage)
 } catch {

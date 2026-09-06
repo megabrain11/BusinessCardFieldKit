@@ -85,13 +85,15 @@ import Foundation
     public var status: PrivateCardBackStatus
     public var skipReason: PrivateCardBackSkipReason?
     public var report: CardBackBenchmarkReport?
+    public var maskingComparison: CardBackMaskingStrategyComparison?
 
     public static var skipped: Self {
       Self(
         reportSchemaVersion: currentSchemaVersion,
         status: .skipped,
         skipReason: .privateCorpusUnavailable,
-        report: nil
+        report: nil,
+        maskingComparison: nil
       )
     }
 
@@ -100,7 +102,20 @@ import Foundation
         reportSchemaVersion: currentSchemaVersion,
         status: .completed,
         skipReason: nil,
-        report: report
+        report: report,
+        maskingComparison: nil
+      )
+    }
+
+    public static func completedMaskingComparison(
+      _ comparison: CardBackMaskingStrategyComparison
+    ) -> Self {
+      Self(
+        reportSchemaVersion: currentSchemaVersion,
+        status: .completed,
+        skipReason: nil,
+        report: nil,
+        maskingComparison: comparison
       )
     }
   }
@@ -147,32 +162,132 @@ import Foundation
       )
     }
 
+    /// Compares the default and projective masking strategies without exposing private inputs.
+    public func runMaskingExperiment(
+      manifest: PrivateCardBackManifest,
+      root: URL
+    ) throws -> CardBackMaskingStrategyComparison {
+      guard warmupRuns >= 0, measuredRuns >= 3 else {
+        throw CardBackBenchmarkError.invalidRunCount
+      }
+      let records = try manifest.validatedCases(root: root)
+      for repeatIndex in 0..<warmupRuns {
+        for (caseIndex, record) in records.enumerated() {
+          _ = try maskingPair(
+            record,
+            baselineFirst: (repeatIndex + caseIndex).isMultiple(of: 2)
+          )
+        }
+      }
+
+      var pairs: [CardBackMaskingStrategyPair] = []
+      for repeatIndex in 0..<measuredRuns {
+        for (caseIndex, record) in records.enumerated() {
+          pairs.append(
+            try maskingPair(
+              record,
+              baselineFirst: (repeatIndex + caseIndex).isMultiple(of: 2)
+            )
+          )
+        }
+      }
+      return CardBackMaskingStrategyAggregator.report(
+        corpusSchemaVersion: manifest.schemaVersion,
+        corpusVersion: nil,
+        caseCount: records.count,
+        warmupRuns: warmupRuns,
+        measuredRuns: measuredRuns,
+        pairs: pairs,
+        assessment: .privateAggregateAvailable,
+        limitations: [
+          "Aggregate private evidence omits source identity and per-case outcomes.",
+          "Timing varies with hardware, system load, and Vision runtime.",
+          "Private aggregate evidence does not replace physical-device human acceptance.",
+          "The experiment remains opt-in and does not approve a production default change.",
+        ]
+      )
+    }
+
     private func scan(_ validated: ValidatedPrivateCardBackCase) throws
       -> CardBackBenchmarkSample
     {
       let record = validated.record
       let data = try Data(contentsOf: validated.imageURL)
-      var configuration = AppleVisionScanConfiguration(
-        recognitionLanguages: record.recognitionLanguages ?? ["ko-KR", "en-US"],
-        automaticallyDetectsLanguage: record.automaticallyDetectsLanguage ?? true,
-        cardRegion: AppleVisionCardRegionConfiguration(
-          mode: (record.attemptsCardIsolation ?? true) ? .automatic : .disabled
-        )
+      let measurement = try measurement(
+        record: record,
+        imageData: data,
+        maskingStrategy: .rectifiedRedetection
       )
-      configuration.diagnostics = AppleVisionDiagnosticsOptions(isEnabled: true)
-      let start = ContinuousClock.now
-      let result = try CardBackScanner(configuration: configuration).scan(imageData: data)
-      let duration = milliseconds(start.duration(to: .now))
       return CardBackBenchmarkRunner.sample(
-        detected: result,
+        detected: measurement.result,
         expectedPayloadKinds: record.expectedPayloadKinds,
         backExpected: record.backExpected,
         front: record.front ?? [:],
         mergedExpected: record.mergedExpected,
         reviewExpected: record.reviewExpected,
         attemptsCardIsolation: record.attemptsCardIsolation ?? true,
-        durationMilliseconds: duration,
+        durationMilliseconds: measurement.durationMilliseconds,
         tags: []
+      )
+    }
+
+    private func maskingPair(
+      _ validated: ValidatedPrivateCardBackCase,
+      baselineFirst: Bool
+    ) throws -> CardBackMaskingStrategyPair {
+      let data = try Data(contentsOf: validated.imageURL)
+      let record = validated.record
+      let baseline: CardBackMaskingStrategyMeasurement
+      let experimental: CardBackMaskingStrategyMeasurement
+      if baselineFirst {
+        baseline = try measurement(
+          record: record,
+          imageData: data,
+          maskingStrategy: .rectifiedRedetection
+        )
+        experimental = try measurement(
+          record: record,
+          imageData: data,
+          maskingStrategy: .projectiveSourceObservation
+        )
+      } else {
+        experimental = try measurement(
+          record: record,
+          imageData: data,
+          maskingStrategy: .projectiveSourceObservation
+        )
+        baseline = try measurement(
+          record: record,
+          imageData: data,
+          maskingStrategy: .rectifiedRedetection
+        )
+      }
+      return CardBackMaskingStrategyPair(
+        baseline: baseline,
+        experimental: experimental
+      )
+    }
+
+    private func measurement(
+      record: PrivateCardBackCase,
+      imageData: Data,
+      maskingStrategy: AppleVisionBarcodeMaskingStrategy
+    ) throws -> CardBackMaskingStrategyMeasurement {
+      var configuration = AppleVisionScanConfiguration(
+        recognitionLanguages: record.recognitionLanguages ?? ["ko-KR", "en-US"],
+        automaticallyDetectsLanguage: record.automaticallyDetectsLanguage ?? true,
+        cardRegion: AppleVisionCardRegionConfiguration(
+          mode: (record.attemptsCardIsolation ?? true) ? .automatic : .disabled
+        ),
+        barcodeMaskingStrategy: maskingStrategy
+      )
+      configuration.diagnostics = AppleVisionDiagnosticsOptions(isEnabled: true)
+      let start = ContinuousClock.now
+      let result = try CardBackScanner(configuration: configuration).scan(imageData: imageData)
+      let duration = milliseconds(start.duration(to: .now))
+      return CardBackMaskingStrategyMeasurement(
+        result: result,
+        durationMilliseconds: duration
       )
     }
 

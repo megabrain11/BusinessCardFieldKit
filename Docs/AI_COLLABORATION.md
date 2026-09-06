@@ -2,6 +2,111 @@
 
 Living document for humans and AI agents (Codex, Claude Code, others). Update the relevant section when you finish significant work. Newest entries at the top.
 
+## Session 2026-08-30 — Source barcode detection stress recovery (completed)
+
+Goal: respond to the observed source-QR detection bottleneck with a bounded, measurable experiment
+without changing the shipped path or committing any private card data.
+
+### What changed
+
+1. **Default-off one-request recovery**: after an empty initial source barcode result only, the
+   adapter performs deterministic full-frame upscale, grayscale, contrast, sharpening, and Otsu
+   thresholding followed by exactly one retry. Initial success, preprocessing failure, and retry
+   failure all preserve the baseline behavior.
+2. **Content-free diagnostics v2**: back diagnostics add the source recovery request count and
+   execution boolean with schema-1 decoding defaults. No payload, OCR text, token, confidence,
+   geometry, image, path, or case identity is exposed.
+3. **Independent stress corpus**: eighteen runtime-rendered fictional scenes cover tiny,
+   very-low-contrast, blurred, center-overlaid, dot-styled, and strongly projective QR codes. The
+   repository contains only the manifest; images are generated deterministically in memory.
+4. **Paired aggregate benchmark**: `--barcode-detection-recovery-experiment` alternates execution
+   order and separates QR payload exactness from field exactness. It reports only aggregate
+   recoveries/regressions, field/token/card-region parity, bounded request counts, style summaries,
+   and latency distributions.
+
+### Evidence and decision
+
+One warmup plus three measured runs produced 54 pairs. Baseline QR exactness was 66.7% and the
+experiment reached 72.2%, recovering three repeated samples from one dot-style scene with zero QR
+or field regressions. Baseline-exact preservation, token parity, and card-region parity were 100%.
+The retry executed for 18/54 pairs; source request p95 increased from 1 to 2, while median extra
+requests remained 0. Strong-perspective and most dot-style scenes remain unresolved.
+
+Keep recovery default OFF. Synthetic recovery establishes that the bounded path can help, not that
+it should ship enabled. The next decision requires an external aggregate-only physical-photo run
+covering damaged, glossy, partial, stylized, and small QR codes across supported devices and Vision
+versions.
+
+## Session 2026-08-30 — Private projective card-back validation (completed)
+
+Goal: carry the exact projective barcode-mask experiment into the external private card-back
+boundary without changing the shipped scanner default or exposing private inputs.
+
+### What changed
+
+1. **Shared paired aggregation**: the synthetic and private runners now use the same deterministic
+   schema-1 comparison builder for token, field, barcode, card-region, request, fallback, and signed
+   duration evidence.
+2. **Opt-in private experiment**: `card-field-private-back-benchmark
+   --projective-mask-experiment` alternates baseline/experimental order by repeat and sorted input
+   position. It requires three measured repetitions and leaves the existing private benchmark
+   behavior unchanged when the flag is absent.
+3. **Redacted envelope**: the command envelope gained an optional comparison payload with
+   backward-compatible decoding. Reports omit filenames, root paths, OCR, tokens, payloads,
+   expected values, tags, case identifiers, and corpus identity. A missing root remains an explicit
+   redacted skip.
+4. **Boundary regression tests**: tests cover real runner execution over a transient isolated-card
+   scene, paired parity and request reduction, aggregate redaction, legacy envelope decoding, and
+   the minimum-run guard.
+
+### Decision and remaining risk
+
+- Keep `.rectifiedRedetection` as the default. Private aggregate evidence is necessary but not
+  sufficient for promotion; representative physical photos and human acceptance are still needed.
+- Interpret signed latency deltas as host/runtime observations. Run multiple physical-device
+  cohorts before treating them as production savings.
+- Do not preserve private raw reports outside the configured corpus boundary or add per-case output.
+
+## Session 2026-08-29 — Exact projective barcode-mask experiment (completed)
+
+Goal: evaluate whether source barcode observations can replace the isolated-card masking request
+without changing OCR fields, public barcode metadata, or the shipped default.
+
+### What changed
+
+1. **Fail-closed projective mapper**: `BarcodeMaskingExperiment.swift` maps each source barcode
+   quadrilateral to the normalized rectified card image with a four-point homography solved by
+   deterministic Gaussian elimination. Non-finite, degenerate, singular, or out-of-range geometry
+   returns `nil`, which selects the existing exact rectified-image redetection path.
+2. **Opt-in strategy contract**: `AppleVisionScanConfiguration.barcodeMaskingStrategy` defaults to
+   `.rectifiedRedetection`. `.projectiveSourceObservation` is additive and experimental. Public
+   barcode metadata remains source-based; only the internal OCR masking regions change.
+3. **Content-free diagnostics**: back diagnostics add the strategy, projective-applied flag, and
+   fallback count with backward-compatible decoding. No payload, OCR text, token value, geometry,
+   image, path, or case identity is serialized.
+4. **Paired aggregate benchmark**: `--card-back-mask-experiment` runs deterministic alternating
+   baseline/experimental order and emits a separate schema-1 report with parity, unsigned request
+   savings, signed total/isolated latency deltas, and fallback counts. The benchmark renders each
+   scene once per pair and keeps all output aggregate-only.
+
+### Verification and evidence
+
+`swift format lint --strict --recursive Sources Tests`, `swift build`, and the focused projective
+suite pass. The fourteen card-back scenes remain parity-identical for tokens, fields, detected
+barcodes, and card-region selection. With one warmup and five measured runs (70 paired samples),
+projective mapping applied to all 10 isolated samples with zero fallbacks; isolated request
+reduction was 1 at p50/p95. Isolated signed duration delta was −17.49 ms p50 and −1.86 ms p95;
+all-sample delta was −0.23 ms p50 and 7.54 ms p95 on the reference host.
+
+### Decision and remaining risk
+
+- Keep `.rectifiedRedetection` as the default. The experiment is useful for measuring request and
+  latency savings but synthetic Core Text timing is machine-specific and cannot establish camera,
+  glossy-print, damaged-code, or Vision-version behavior.
+- Run the private card-back holdout and physical-device acceptance before considering promotion.
+- Preserve the exact quadrilateral contract and fail-closed fallback; do not replace it with a
+  bounding-box approximation or automatic rollout.
+
 ## Session 2026-08-29 — Card-back masking diagnostics (completed)
 
 Goal: measure the extra barcode request used to mask QR regions after perspective isolation without
@@ -377,7 +482,8 @@ Goal: make the uncommitted OCR improvements GitHub-ready. No commits or pushes w
 
 1. **`swift format lint --strict` failures** in `AppleVisionAdapter.swift`, `ImagePreprocessing.swift`, `LayoutAnalyzer.swift`, `OCRUpgradeTests.swift` (semicolons, long lines, indentation, trailing commas, multiline expressions). Fixed by normalizing those four files with `swift format format --in-place`; diff reviewed to confirm whitespace/line-break-only changes with identical semantics.
 2. **Missing direct coverage for Vision revision clamping** (`recognitionRevision` 1...3). Added regression test "Recognition revisions are clamped to the supported 1...3 range" (87 tests total now).
-3. **Real provider domain in new test fixtures** (`gmail.com`). Replaced with fictional domains (`example.net`, `example.org`, mangled variants like `exampl3.net`) per PRIVACY.md/AGENTS.md rules.
+3. **Real provider domain in new test fixtures**. Replaced with fictional domains (`example.net`,
+   `example.org`, mangled variants like `exampl3.net`) per PRIVACY.md/AGENTS.md rules.
 4. **Environment caveat:** `Scripts/check-repository.sh` step at line 30 silently no-ops when `rg` is not installed (command-not-found inside an `if` does not fail under `set -e`). The script still exits 0. Locally verified the credential scan equivalent with `grep -rEn '(AKIA[0-9A-Z]{16}|-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----)' .` → no matches. Consider adding a guard such as `command -v rg >/dev/null || { echo "ripgrep required" >&2; exit 1; }`.
 
 ### Safety audit of the ten OCR improvements — results

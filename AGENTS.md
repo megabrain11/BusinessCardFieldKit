@@ -59,18 +59,22 @@ Sources/
     ContributionSanitizer.swift  placeholder-based draft sanitizer
   AppleVisionAdapter/
     AppleVisionAdapter.swift configs, scanner, region selection, evidence, token mapping
+    BarcodeMaskingExperiment.swift opt-in exact projective source-observation masking with fail-closed fallback
     ConditionalDualPass.swift default-off, fail-closed second-request experiment
     ImagePreprocessing.swift upscale/grayscale/contrast/sharpen pipeline + shared CIContext
     ScanDiagnostics.swift opt-in redacted stage timings and Vision request counters
     CardBackDiagnostics.swift opt-in content-free back-scan timings and barcode request counters
     CardBackScanner.swift local barcode detection + back-side OCR composition
+    BarcodeDetectionRecovery.swift default-off, one-request empty-result recovery experiment
   AppleVisionBenchmarking/
     GoldenCorpus.swift deterministic 25-layout × 2-variant renderer and expectations
     DiagnosticsBenchmark.swift aggregate-only latency/request benchmark contract
     TargetedReRecognitionBenchmark.swift paired targeted-stage evidence report
     PrivateHoldoutBenchmark.swift external-only aggregate private evaluator
     CardBackBenchmark.swift deterministic card-back scenes and aggregate report
-    PrivateCardBackBenchmark.swift external-only aggregate private back evaluator
+    ProjectiveBarcodeMaskingBenchmark.swift paired request/latency/parity report for the opt-in mask experiment
+    BarcodeDetectionRecoveryBenchmark.swift paired aggregate QR stress and recovery evidence
+    PrivateCardBackBenchmark.swift external-only aggregate private back and paired mask evaluator
   card-field-scan/main.swift CLI flags mirror scan configuration
   card-field-benchmark/main.swift synthetic diagnostics benchmark CLI
   card-field-private-benchmark/main.swift environment-gated private benchmark CLI
@@ -90,6 +94,17 @@ Docs/, Schemas/, Rules/, Fixtures/, Examples/
 - **`OCRToken.alternatives`** decodes legacy JSON missing the key as `[]`; the default classifier consumes only `text`. The opt-in strict-field corrector may select one alternative only for email, explicit URL, or phone syntax under the fail-closed rules documented in `ARCHITECTURE.md`.
 - **Conditional dual-pass remains experimental and default OFF.** Full-image fallback, targeted recognition, weak or mixed-script text, complex/cropped layouts, strict alternative conflicts, and review warnings must retain the existing second request. Synthetic parity cannot promote it without the private holdout.
 - **Card-back evidence stays aggregate-only.** Never serialize decoded payloads, OCR content, private image references, tags, or case identifiers. Synthetic back success cannot replace private physical-device acceptance.
+- **Projective barcode masking remains experimental and default OFF.** The baseline re-detects
+  barcode regions on the exact rectified image. The opt-in strategy maps source observation
+  quadrilaterals through a validated homography and falls back to that baseline on any invalid,
+  degenerate, or out-of-range mapping; it must not approximate a bounding box from weak geometry.
+- **Private projective comparison remains aggregate-only and opt-in.** Require at least three
+  measured repetitions, alternate strategy order deterministically, preserve a redacted skip for a
+  missing root, and never serialize expected values, source identity, paths, or per-case outcomes.
+- **Source barcode recovery remains experimental and default OFF.** It may run one enhanced
+  full-frame request only after the initial source request returns no observations. Successful
+  initial detection never pays the retry; preprocessing or retry failure preserves the empty
+  baseline result. Promotion requires private physical-device evidence, not synthetic improvement.
 
 ## Current status / open work
 

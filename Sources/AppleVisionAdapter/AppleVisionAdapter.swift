@@ -175,6 +175,13 @@ import Foundation
     /// Disabled by default and never includes OCR or image content.
     public var diagnostics: AppleVisionDiagnosticsOptions
 
+    /// Card-back barcode masking strategy. The rectified redetection path is the stable default;
+    /// source-observation projective mapping is an opt-in experiment with fail-closed fallback.
+    public var barcodeMaskingStrategy: AppleVisionBarcodeMaskingStrategy
+
+    /// Default-off, single-retry recovery for an empty source barcode result.
+    public var barcodeDetectionRecovery: AppleVisionBarcodeDetectionRecoveryOptions
+
     public init(
       recognitionLevel: RecognitionLevel = .accurate,
       recognitionLanguages: [String] = [],
@@ -193,7 +200,10 @@ import Foundation
       performsTargetedReRecognition: Bool = true,
       targetedReRecognitionConfidenceLimit: Double = 0.35,
       infersTokenLanguages: Bool = true,
-      diagnostics: AppleVisionDiagnosticsOptions = .disabled
+      diagnostics: AppleVisionDiagnosticsOptions = .disabled,
+      barcodeMaskingStrategy: AppleVisionBarcodeMaskingStrategy = .rectifiedRedetection,
+      barcodeDetectionRecovery: AppleVisionBarcodeDetectionRecoveryOptions =
+        AppleVisionBarcodeDetectionRecoveryOptions()
     ) {
       self.recognitionLevel = recognitionLevel
       self.recognitionLanguages = recognitionLanguages
@@ -212,6 +222,8 @@ import Foundation
         max(targetedReRecognitionConfidenceLimit, 0), 1)
       self.infersTokenLanguages = infersTokenLanguages
       self.diagnostics = diagnostics
+      self.barcodeMaskingStrategy = barcodeMaskingStrategy
+      self.barcodeDetectionRecovery = barcodeDetectionRecovery
     }
   }
 
@@ -421,7 +433,8 @@ import Foundation
           cardRegionSelection: recognized.cardRegionSelection,
           diagnostics: diagnostics?.snapshot(configuration: configuration)
         ),
-        recognitionImage: recognized.recognitionImage
+        recognitionImage: recognized.recognitionImage,
+        cardRegionQuadrilateral: recognized.cardRegionQuadrilateral
       )
     }
 
@@ -484,12 +497,14 @@ import Foundation
       var tokens: [OCRToken]
       var selection: AppleVisionCardRegionSelection
       var recognitionImage: CGImage
+      var cardRegionQuadrilateral: BarcodeMaskQuadrilateral?
       if configuration.cardRegion.mode == .automatic,
         let isolatedResult = isolatedCardResult(from: working, diagnostics: diagnostics)
       {
         tokens = isolatedResult.tokens
         selection = .isolated(isolatedResult.region)
         recognitionImage = isolatedResult.recognitionImage
+        cardRegionQuadrilateral = isolatedResult.quadrilateral
         diagnostics?.recordCardIsolationSucceeded()
       } else {
         var recognized = try recognizeTokens(
@@ -506,6 +521,7 @@ import Foundation
         )
         tokens = recognized
         recognitionImage = working
+        cardRegionQuadrilateral = nil
         selection =
           configuration.cardRegion.mode == .disabled ? .disabled : .fullImageFallback
         if selection == .fullImageFallback {
@@ -519,7 +535,8 @@ import Foundation
       return TokenRecognitionPayload(
         tokens: tokens,
         cardRegionSelection: selection,
-        recognitionImage: recognitionImage
+        recognitionImage: recognitionImage,
+        cardRegionQuadrilateral: cardRegionQuadrilateral
       )
     }
 
@@ -837,7 +854,8 @@ import Foundation
             selectionScore: selectionScore
           ),
           selectionScore: selectionScore,
-          recognitionImage: correctedImage
+          recognitionImage: correctedImage,
+          quadrilateral: candidate.barcodeMaskQuadrilateral
         )
         if best == nil || selectionScore > best!.selectionScore {
           best = recognition
@@ -1147,17 +1165,20 @@ import Foundation
     var region: AppleVisionDetectedCardRegion
     var selectionScore: Double
     var recognitionImage: CGImage
+    var quadrilateral: BarcodeMaskQuadrilateral
   }
 
   struct TokenRecognitionPayload: Sendable {
     var tokens: [OCRToken]
     var cardRegionSelection: AppleVisionCardRegionSelection
     var recognitionImage: CGImage
+    var cardRegionQuadrilateral: BarcodeMaskQuadrilateral?
   }
 
   struct TokenScanWithRecognitionImage: Sendable {
     var result: AppleVisionTokenScanResult
     var recognitionImage: CGImage
+    var cardRegionQuadrilateral: BarcodeMaskQuadrilateral?
   }
 
   enum RecognitionRequestRole: Equatable, Sendable {
@@ -1298,6 +1319,15 @@ import Foundation
 
     private static func clamp(_ value: Double) -> Double {
       min(max(value, 0), 1)
+    }
+
+    var barcodeMaskQuadrilateral: BarcodeMaskQuadrilateral {
+      BarcodeMaskQuadrilateral(
+        topLeft: topLeft,
+        topRight: topRight,
+        bottomLeft: bottomLeft,
+        bottomRight: bottomRight
+      )
     }
   }
 

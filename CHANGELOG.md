@@ -21,6 +21,13 @@ The project follows [Semantic Versioning](https://semver.org/). Before `1.0.0`, 
   isolated-mask, classification/merge, and total stage durations plus barcode-request counts. The
   aggregate card-back report is schema 3 and keeps its diagnostics summary optional for schema-2
   decoding.
+- A default-off `AppleVisionBarcodeMaskingStrategy.projectiveSourceObservation` experiment and
+  schema-1 paired benchmark. It maps source barcode quadrilaterals through a validated homography,
+  falls back to exact rectified-image redetection on any unsafe geometry, and reports aggregate
+  parity, signed latency deltas, isolated request savings, and fallback counts without content.
+- An opt-in `--projective-mask-experiment` mode for the external private card-back runner. It
+  alternates baseline and experimental scans over at least three repetitions and reuses the paired
+  aggregate contract without serializing source identity, expected values, paths, or per-case data.
 - A default-off `AppleVisionConditionalDualPassOptions` experiment that skips the second
   language-correction pass only for high-confidence, single-script, simple-layout scans with
   multiple complete strict-contact families and no conflicting alternatives, review warning,

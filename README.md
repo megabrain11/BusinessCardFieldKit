@@ -16,7 +16,7 @@ Phase 1 is a pure Swift Package. `CardFieldCore` has no dependency on UIKit, Swi
 - Language-neutral JSON contracts and rule-pack schemas
 - Synthetic evaluation fixtures and a field-level precision/recall CLI
 - An optional local Apple Vision scanner with foreground-card isolation, saliency fallback, perspective correction at enforced output resolution, image enhancement (upscale, grayscale, contrast, sharpening), dual-pass recognition that shields emails and phones from language correction, multi-candidate readings, targeted low-confidence re-recognition, script-based token languages, a pinned Vision revision, async APIs, and conservative full-image fallback
-- Optional card-back QR/barcode scanning with vCard 3.0/4.0 parsing, same-coordinate QR OCR masking after perspective isolation, deterministic front/back suggestion merging, and default-off content-free stage diagnostics; decoded payloads are returned only as structured fields and are never logged or persisted
+- Optional card-back QR/barcode scanning with vCard 3.0/4.0 parsing, same-coordinate QR OCR masking after perspective isolation, deterministic front/back suggestion merging, and default-off content-free stage diagnostics; exact projective masking and one-request empty-result barcode recovery are available as separate fail-closed experiments; decoded payloads are returned only as structured fields and are never logged or persisted
 
 ## Coordinate contract
 
@@ -85,9 +85,9 @@ For a complete integration walkthrough, see the [CardFieldCore DocC catalog](Sou
 ## Package products
 
 - `CardFieldCore`: contracts, normalization, rules, classification, confidence, evidence, corrections, sanitization, layout grouping, and script-based language inference
-- `AppleVisionAdapter`: locally enhances and recognizes a card image with Vision, converts observations into core tokens with alternative readings, classifies them, and optionally decodes card-back barcodes
+- `AppleVisionAdapter`: locally enhances and recognizes a card image with Vision, converts observations into core tokens with alternative readings, classifies them, and optionally decodes card-back barcodes; the projective masking strategy remains opt-in
 - `CardFieldEvaluation`: decodes synthetic fixtures and reports field-level precision and recall
-- `AppleVisionBenchmarking`: renders versioned synthetic front and back corpora and emits aggregate-only OCR, barcode, merge, and latency evidence, including the default-off conditional dual-pass experiment
+- `AppleVisionBenchmarking`: renders versioned synthetic front and back corpora and emits aggregate-only OCR, barcode, merge, and latency evidence, including the default-off conditional dual-pass and projective barcode-masking experiments
 - `card-field-eval`: command-line fixture runner
 - `card-field-scan`: local Apple-platform image scanner that emits structured JSON
 - `card-field-benchmark`: local Apple-platform benchmark for p50/p95 latency, request counts, execution rates, and exact-field parity without OCR payloads
@@ -112,6 +112,26 @@ The regular benchmark interleaves shipped and conditional dual-pass scans per sc
 Private real-photo evaluation uses a separate external root and the shipped confidence threshold. See [Private Holdout Evaluation](Docs/PRIVATE_HOLDOUT_EVALUATION.md). No private image, expected value, filename, path, or per-case output belongs in this repository.
 
 Card-back regression uses fourteen deterministic runtime-rendered scenes through `card-field-benchmark --card-back-evidence`. Real-photo back evaluation uses a separate external root and at least three repetitions; see [Card-Back Evaluation](Docs/CARD_BACK_EVALUATION.md). Synthetic success is not a physical-device or production release approval.
+
+To measure the exact projective barcode-mask experiment against the shipped rectified-image
+redetection strategy, run `card-field-benchmark --card-back-mask-experiment --warmup 1 --runs 5
+--pretty Fixtures/CardBack/manifest.json`. The report is aggregate-only and includes field/token/
+barcode/card-region parity, signed latency deltas, isolated-sample request reduction, and
+fail-closed fallback counts. The experiment is disabled in normal scans and its synthetic timing
+does not justify changing the default.
+
+With an external private card-back root, add `--projective-mask-experiment` to
+`card-field-private-back-benchmark` to collect the same paired parity, request, fallback, and signed
+latency evidence over real photos. The runner alternates strategy order deterministically, requires
+at least three measured repetitions, and emits aggregate data only. An unavailable private root is
+reported as a redacted skip, never as passing evidence.
+
+To measure default-off source barcode recovery, run `swift run card-field-benchmark
+--barcode-detection-recovery-experiment --pretty Fixtures/BarcodeDetectionStress/manifest.json`.
+The paired report separates QR payload detection from field exactness, alternates execution order,
+and reports only aggregate recovery/regression, request, parity, style, and latency evidence. The
+experiment performs at most one enhanced full-frame request after an empty initial result and is
+not approved as a default by synthetic evidence.
 
 ## Rules and corrections
 

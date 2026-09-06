@@ -17,6 +17,10 @@ swift run card-field-private-benchmark --help >/dev/null
 swift run card-field-private-back-benchmark --help >/dev/null
 swift run card-field-benchmark --card-back-evidence --warmup 0 --runs 1 \
     Fixtures/CardBack/manifest.json >/dev/null
+swift run card-field-benchmark --card-back-mask-experiment --warmup 0 --runs 1 \
+    Fixtures/CardBack/manifest.json >/dev/null
+swift run card-field-benchmark --barcode-detection-recovery-experiment --warmup 0 --runs 1 \
+    Fixtures/BarcodeDetectionStress/manifest.json >/dev/null
 
 docc_validation_dir=$(mktemp -d)
 trap 'rm -r "$docc_validation_dir"' EXIT
@@ -33,7 +37,7 @@ xcrun docc convert Sources/CardFieldCore/CardFieldCore.docc \
     --diagnostic-level warning \
     --output-path "$docc_validation_dir/CardFieldCore.doccarchive"
 
-for file in Schemas/*.json Rules/*.json Fixtures/Synthetic/*.json Fixtures/GoldenScenes/*.json Fixtures/TargetedReRecognition/*.json Fixtures/CardBack/*.json Examples/Corrections/*.json; do
+for file in Schemas/*.json Rules/*.json Fixtures/Synthetic/*.json Fixtures/GoldenScenes/*.json Fixtures/TargetedReRecognition/*.json Fixtures/CardBack/*.json Fixtures/BarcodeDetectionStress/*.json Examples/Corrections/*.json; do
     python3 -m json.tool "$file" >/dev/null
 done
 

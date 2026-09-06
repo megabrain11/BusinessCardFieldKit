@@ -20,8 +20,10 @@ import Testing
     )
     let allowedNames: Set<String> = [
       "schemaVersion", "stageTimings", "totalBarcodeRequestCount",
-      "sourceBarcodeRequestCount", "isolatedMaskBarcodeRequestCount",
-      "isolatedMaskDetectionExecuted",
+      "sourceBarcodeRequestCount", "sourceBarcodeRecoveryRequestCount",
+      "sourceBarcodeRecoveryExecuted", "isolatedMaskBarcodeRequestCount",
+      "isolatedMaskDetectionExecuted", "maskingStrategy", "projectiveMaskingApplied",
+      "projectiveMaskFallbackCount",
     ]
     #expect(Set(Mirror(reflecting: diagnostics).children.compactMap(\.label)) == allowedNames)
 
@@ -36,11 +38,27 @@ import Testing
     }
   }
 
+  @Test("Legacy card-back diagnostics decode with projective fields disabled")
+  func legacyCardBackDiagnosticsDecode() throws {
+    let legacy =
+      #"{"schemaVersion":1,"stageTimings":[],"totalBarcodeRequestCount":1,"sourceBarcodeRequestCount":1,"isolatedMaskBarcodeRequestCount":0,"isolatedMaskDetectionExecuted":false}"#
+    let decoded = try JSONDecoder().decode(
+      AppleVisionBackScanDiagnostics.self,
+      from: Data(legacy.utf8)
+    )
+    #expect(decoded.maskingStrategy == .rectifiedRedetection)
+    #expect(!decoded.projectiveMaskingApplied)
+    #expect(decoded.projectiveMaskFallbackCount == 0)
+    #expect(decoded.sourceBarcodeRecoveryRequestCount == 0)
+    #expect(!decoded.sourceBarcodeRecoveryExecuted)
+  }
+
   @Test("Injected clock produces deterministic back-stage timings and request counts")
   func deterministicCardBackDiagnostics() {
     let clock = DeterministicDiagnosticsClock()
     let instrumentation = BackScanInstrumentation(clock: clock)
     instrumentation.recordSourceBarcodeRequest()
+    instrumentation.recordSourceBarcodeRecoveryRequest()
     instrumentation.measure(.sourceBarcodeDetection) { clock.advance(by: 3) }
     instrumentation.measure(.tokenRecognition) { clock.advance(by: 5) }
     instrumentation.recordIsolatedMaskBarcodeRequest()
@@ -57,8 +75,10 @@ import Testing
         ]
     )
     #expect(diagnostics.stageTimings.map(\.durationMilliseconds) == [3, 5, 2, 1, 12])
-    #expect(diagnostics.totalBarcodeRequestCount == 2)
-    #expect(diagnostics.sourceBarcodeRequestCount == 1)
+    #expect(diagnostics.totalBarcodeRequestCount == 3)
+    #expect(diagnostics.sourceBarcodeRequestCount == 2)
+    #expect(diagnostics.sourceBarcodeRecoveryRequestCount == 1)
+    #expect(diagnostics.sourceBarcodeRecoveryExecuted)
     #expect(diagnostics.isolatedMaskBarcodeRequestCount == 1)
     #expect(diagnostics.isolatedMaskDetectionExecuted)
   }
