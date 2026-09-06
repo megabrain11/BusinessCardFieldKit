@@ -56,7 +56,7 @@ Sources/
   card-field-scan/main.swift CLI flags mirror scan configuration
 Tests/
   CardFieldCoreTests/        classifier, fixtures, layout, language, encoding
-  AppleVisionAdapterTests/   geometry, merging, preprocessing, E2E rendered cards
+  AppleVisionAdapterTests/   geometry, merging, preprocessing, E2E rendered cards, golden-scene regression corpus (Fixtures/GoldenScenes)
 Docs/, Schemas/, Rules/, Fixtures/, Examples/
 ```
 

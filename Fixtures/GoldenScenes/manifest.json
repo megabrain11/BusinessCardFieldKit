@@ -1,0 +1,114 @@
+[
+  {
+    "identifier": "golden-straight-card-en",
+    "canvas": {"width": 1600, "height": 900},
+    "backgroundGray": 1.0,
+    "lines": [
+      {"text": "Alex Kim", "fontSize": 64, "x": 0.08, "y": 0.30},
+      {"text": "Founder & CEO", "fontSize": 44, "x": 0.08, "y": 0.42},
+      {"text": "alex.kim@example.com", "fontSize": 36, "x": 0.08, "y": 0.52},
+      {"text": "Tel +1 202 555 0147", "fontSize": 36, "x": 0.08, "y": 0.60},
+      {"text": "www.example.com", "fontSize": 36, "x": 0.08, "y": 0.68}
+    ],
+    "recognitionLanguages": ["en-US"],
+    "automaticallyDetectsLanguage": false,
+    "cardRegionMode": "disabled",
+    "expected": {
+      "fullName": ["Alex Kim"],
+      "jobTitle": ["Founder & CEO"],
+      "emailAddresses": ["alex.kim@example.com"],
+      "workPhoneNumbers": ["+12025550147"],
+      "websites": ["www.example.com"]
+    }
+  },
+  {
+    "identifier": "golden-skewed-card-en",
+    "canvas": {"width": 2000, "height": 1200},
+    "backgroundGray": 0.15,
+    "cardQuad": [[0.19, 0.208], [0.81, 0.2375], [0.7775, 0.725], [0.21, 0.696]],
+    "lines": [
+      {"text": "Jordan Lee", "fontSize": 58, "x": 0.26, "y": 0.333},
+      {"text": "Product Director", "fontSize": 40, "x": 0.26, "y": 0.417},
+      {"text": "jordan.lee@example.com", "fontSize": 34, "x": 0.26, "y": 0.533},
+      {"text": "Tel +1 415 555 0198", "fontSize": 34, "x": 0.26, "y": 0.608}
+    ],
+    "recognitionLanguages": ["en-US"],
+    "automaticallyDetectsLanguage": false,
+    "cardRegionMode": "automatic",
+    "expected": {
+      "fullName": ["Jordan Lee"],
+      "jobTitle": ["Product Director"],
+      "emailAddresses": ["jordan.lee@example.com"],
+      "workPhoneNumbers": ["+14155550198"]
+    }
+  },
+  {
+    "identifier": "golden-korean-card",
+    "canvas": {"width": 1600, "height": 900},
+    "backgroundGray": 1.0,
+    "lines": [
+      {"text": "가온 누리", "fontSize": 64, "x": 0.08, "y": 0.30},
+      {"text": "제품 팀장", "fontSize": 44, "x": 0.08, "y": 0.42},
+      {"text": "새봄 연구소", "fontSize": 48, "x": 0.08, "y": 0.53},
+      {"text": "gaon.nuri@saebom.example", "fontSize": 36, "x": 0.08, "y": 0.63},
+      {"text": "휴대폰 010-0000-0001", "fontSize": 34, "x": 0.08, "y": 0.71}
+    ],
+    "recognitionLanguages": ["ko-KR", "en-US"],
+    "automaticallyDetectsLanguage": true,
+    "cardRegionMode": "disabled",
+    "expected": {
+      "fullName": ["가온 누리"],
+      "jobTitle": ["제품 팀장"],
+      "organization": ["새봄 연구소"],
+      "emailAddresses": ["gaon.nuri@saebom.example"],
+      "mobilePhoneNumbers": ["01000000001"]
+    }
+  },
+  {
+    "identifier": "golden-compact-lowcontrast-en",
+    "canvas": {"width": 900, "height": 520},
+    "backgroundGray": 0.88,
+    "textGray": 0.30,
+    "lines": [
+      {"text": "Riley Fox", "fontSize": 40, "x": 0.10, "y": 0.24},
+      {"text": "Design Engineer", "fontSize": 30, "x": 0.10, "y": 0.38},
+      {"text": "riley.fox@driftwood.example", "fontSize": 26, "x": 0.10, "y": 0.54},
+      {"text": "T +1 303 555 0164", "fontSize": 26, "x": 0.10, "y": 0.66},
+      {"text": "driftwood.example", "fontSize": 24, "x": 0.10, "y": 0.78}
+    ],
+    "recognitionLanguages": ["en-US"],
+    "automaticallyDetectsLanguage": false,
+    "cardRegionMode": "disabled",
+    "expected": {
+      "fullName": ["Riley Fox"],
+      "jobTitle": ["Design Engineer"],
+      "emailAddresses": ["riley.fox@driftwood.example"],
+      "workPhoneNumbers": ["+13035550164"],
+      "websites": ["driftwood.example"]
+    }
+  },
+  {
+    "identifier": "golden-two-column-en",
+    "canvas": {"width": 1400, "height": 800},
+    "backgroundGray": 1.0,
+    "lines": [
+      {"text": "Morgan Vale", "fontSize": 56, "x": 0.08, "y": 0.28},
+      {"text": "Head of Operations", "fontSize": 38, "x": 0.08, "y": 0.43},
+      {"text": "VALEWORKS CO.", "fontSize": 42, "x": 0.08, "y": 0.58},
+      {"text": "morgan.vale@valeworks.example", "fontSize": 30, "x": 0.55, "y": 0.48},
+      {"text": "M +1 646 555 0110", "fontSize": 30, "x": 0.55, "y": 0.61},
+      {"text": "valeworks.example", "fontSize": 28, "x": 0.55, "y": 0.74}
+    ],
+    "recognitionLanguages": ["en-US"],
+    "automaticallyDetectsLanguage": false,
+    "cardRegionMode": "disabled",
+    "expected": {
+      "fullName": ["Morgan Vale"],
+      "jobTitle": ["Head of Operations"],
+      "organization": ["VALEWORKS CO."],
+      "emailAddresses": ["morgan.vale@valeworks.example"],
+      "mobilePhoneNumbers": ["+16465550110"],
+      "websites": ["valeworks.example"]
+    }
+  }
+]

@@ -2,6 +2,35 @@
 
 Living document for humans and AI agents (Codex, Claude Code, others). Update the relevant section when you finish significant work. Newest entries at the top.
 
+## Session 2026-08-26 — Golden-scene regression corpus (completed)
+
+Goal: close the first item from the open-work list by making preprocessing/recognition changes measurable per change. No commits or pushes were made in this session.
+
+### What changed
+
+1. **Manifest-driven synthetic scenes**: `Fixtures/GoldenScenes/manifest.json` describes five scenes (canvas, optional card quad on a dark backdrop, text lines with normalized positions/font sizes, recognition languages, region mode, expected fields). Images are *not* committed — scenes render deterministically with Core Text at test time, keeping the repo free of binary artifacts while preserving the golden-corpus property (expected fields are pinned; any pipeline change that shifts recognized output fails loudly).
+2. **Scene coverage**: straight full-bleed English card; skewed card inside a dark scene through automatic region isolation; Hangul card (ko-KR + en-US auto-detect) exercising font fallback and Korean phone normalization (`010-0000-0001` → `01000000001`); compact low-contrast card (900×520, gray-on-gray) exercising preprocessing upscale/contrast; two-column layout seeding the upcoming column-aware classifier work.
+3. **Test support**: `Tests/AppleVisionAdapterTests/GoldenSceneSupport.swift` — `GoldenScene` decoder, `GoldenSceneRenderer` (deterministic Core Text), `GoldenFieldComparator` (whitespace-stripped case-folded set matching per field, with digit-only fallback matching for phone fields so formatting variance does not mask real regressions).
+4. **Tests** (`GoldenSceneRegressionTests.swift`, 98 total now): full-pipeline reproduction of every expected field plus region-mode conformance; repeated-scan stability guard over the Hangul scene (highest provider variance risk); manifest hygiene (unique `golden-*` identifiers, bounded geometry, known field keys, fictional namespaces — emails/websites under `.example`/`example.*`, phones containing `555` or `010` prefixes).
+5. Calibration was performed empirically: a temporary diagnostic dump confirmed all five scenes classify exactly as authored before expectations were frozen; the diagnostic file was removed after calibration.
+
+### Commands executed (all passing)
+
+```sh
+swift build
+swift test                       # 98 passed
+swift run card-field-eval Fixtures/Synthetic/public-alpha.json   # FP/FN = 0 on every field
+swift run card-field-eval Fixtures/Synthetic/phase1.json         # exit 0
+swift run card-field-scan --help # flags listed
+swift format lint --recursive --strict Sources Tests Package.swift
+```
+
+### Remaining risks / notes
+
+- Golden expectations were calibrated on this machine's Vision runtime (revision pinned to 3 in config defaults). Provider-level OCR drift across OS versions may require re-calibrating individual scenes; failures name the scene and field so triage is cheap.
+- `Scripts/check-repository.sh` still cannot run here (ripgrep absent); steps above were run individually as in prior sessions.
+- Scene rendering relies on system font fallback for Hangul (Helvetica lacks Hangul glyphs). If a future macOS drops the fallback font, only the Korean scene would need a font override in the renderer.
+
 ## Session 2026-08-23 — Build restored + generic token-only scanTokens API (completed)
 
 Goal: unblock the SwiftPM build broken by a duplicated adapter file, then expose the existing OCR pipeline as a generic token-only API for non-card documents (a future AnswerSheetFieldKit can consume it). No commits or pushes.
