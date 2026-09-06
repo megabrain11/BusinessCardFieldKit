@@ -2,6 +2,115 @@
 
 Living document for humans and AI agents (Codex, Claude Code, others). Update the relevant section when you finish significant work. Newest entries at the top.
 
+## Session 2026-08-29 — Card-back masking diagnostics (completed)
+
+Goal: measure the extra barcode request used to mask QR regions after perspective isolation without
+changing recognition policy, serializing private content, or adding default-path instrumentation.
+
+### What changed
+
+1. **Default-off back diagnostics v1**: `AppleVisionBackScanDiagnostics` reports fixed stage spans,
+   source and isolated-mask barcode-request counts, and whether rectified mask detection executed.
+   It contains no OCR text, decoded payload, confidence, geometry, image, path, token, or arbitrary
+   metadata.
+2. **Parity-preserving instrumentation**: disabled calls create no instrumentation object. Enabled
+   calls keep nested token diagnostics off, measure source barcode detection, token recognition,
+   rectified mask detection, classification/merge, and total scan time, and return identical tokens,
+   fields, barcode metadata, and card-region decisions.
+3. **Aggregate report v3**: card-back benchmark reports optionally include content-free stage and
+   request distributions. The optional field keeps schema-2 reports decodable, and aggregation is
+   independent of sample order.
+4. **Path evidence**: disabled and full-image fallback scans issue one source barcode request. An
+   isolated scan issues that request plus exactly one request on the rectified recognition image.
+
+### Verification and evidence
+
+`swift test --no-parallel` passes 180 tests. Diagnostics ON/OFF parity holds across all fourteen
+synthetic back scenes. One warmup plus three measured runs produced 42 samples with all field and
+decision rates at 100%. Six isolated samples executed the additional masking request; its direct
+stage span was p50 14.4 ms and p95 21.1 ms on that host. Source requests were 1 at p50/p95, while
+total barcode requests were 1 at p50 and 2 at p95.
+
+### Decision and remaining risk
+
+- Keep exact rectified-image redetection unchanged. Its measured synthetic cost is modest and
+  preserves coordinate correctness; do not replace it with a bounding-box approximation.
+- The outer total begins after encoded-image decoding, so it is a scanner-stage diagnostic rather
+  than end-to-end ingestion latency.
+- Machine-specific synthetic timing cannot establish real-camera value. Gloss, damaged or partial
+  QR codes, device variance, and private CRM acceptance still require the external runner and human
+  review before any default or optimization decision.
+
+## Session 2026-08-29 — Exact isolated-card barcode masking (completed)
+
+Goal: remove QR-shaped OCR noise after perspective card isolation without changing public barcode
+geometry or approximating a source bounding box in rectified coordinates.
+
+### What changed
+
+1. **Exact recognition image handoff**: the token scanner now has a package-internal result that pairs the unchanged public token result with the exact upright image used for OCR. The image exists only for the synchronous call and is neither retained nor returned publicly.
+2. **Coordinate-consistent masking**: disabled and fallback back scans reuse source barcode regions. Isolated scans run a content-free barcode-region request on the perspective-corrected recognition image, then filter only tokens that substantially overlap those rectified regions. Public decoded-barcode metadata remains source-based.
+3. **Whole-card projective scenes**: the back corpus now contains fourteen cases and sixteen QR codes. Two cases transform the entire card, its nearby contact text, and one or two QR codes together and require `.isolated` rather than fallback.
+4. **Aggregate contract v2**: reports add card-region decision accuracy. No OCR text, payload, geometry, path, image, token, or case identity is serialized.
+5. **Regression coverage**: direct tests cover unsupported QR noise, nearby email and phone preservation, public/internal token parity, automatic perspective isolation, multiple QR codes, and EXIF rotation.
+
+### Verification
+
+`swift test --no-parallel` passes 176 tests. All fifty golden scenes remain exact in base,
+column-aware, and strict-field configurations. The fourteen-case back corpus detects all sixteen QR
+codes and holds payload-kind, back-field, merged-field, duplicate, review, and card-region decision
+rates at 100%. Public-alpha remains zero false positives and zero false negatives.
+
+### Remaining risk
+
+- An isolated back performs one additional local barcode-region request. Its latency impact is included in total back-scan timing but not yet broken out as a public diagnostics stage.
+- Real camera, glossy print, damaged QR, partial crop, device variance, and private CRM acceptance still require the external runner and human review.
+- A completed private aggregate is evidence for review, never automatic approval.
+
+## Session 2026-08-29 — Card-back aggregate evaluation (completed)
+
+Goal: turn the new card-back scanner into a measurable regression surface and define a privacy-safe
+real-photo acceptance boundary without committing any card image or decoded payload.
+
+### What changed
+
+1. **Deterministic back corpus**: `Fixtures/CardBack/manifest.json` defines twelve fictional runtime-rendered scenes and thirteen QR codes spanning vCard 3/4, URLs, unsupported content, small/low-contrast, rotation, perspective, multiple QR, visible text, duplicate suppression, and identity-conflict review.
+2. **Aggregate contract**: `card-field-benchmark --card-back-evidence` reports only barcode counts, payload-kind/back/merged/duplicate/review rates, p50/p95 latency, and fixed tag coverage. It has no payload, OCR text, geometry, image, path, or case-identity field.
+3. **QR OCR false-positive fix**: the back scanner classifies token-only OCR after removing tokens substantially overlapping detected barcodes in shared full-image coordinates. Perspective-isolated tokens fail closed and remain unchanged until exact coordinate mapping is available.
+4. **External private boundary**: `card-field-private-back-benchmark` reads relative regular files only from `PRIVATE_CARD_BACK_CORPUS_ROOT`, rejects path escape, duplicate references and unknown fields, requires at least three measured runs, and emits no corpus identity or private tags. Missing configuration returns a redacted successful skip, which is insufficient evidence.
+5. **Evidence result**: all twelve synthetic cases reproduce the thirteen expected barcode kinds, back fields, merged fields, duplicate decisions, and review decisions exactly. This remains synthetic-only evidence and cannot approve a physical-device or production rollout.
+
+### Verification
+
+`swift test --no-parallel` passes 173 tests. The card-back benchmark reports 12/12 exact cases,
+13/13 detected barcode kinds, and 100% duplicate/review agreement. Public-alpha retains zero false
+positives and zero false negatives. The official repository check includes the new CLI smoke test,
+synthetic back run, and manifest JSON validation.
+
+### Remaining risk
+
+- QR-region masking is exact for disabled or full-image-fallback OCR. Perspective-isolated OCR uses rectified coordinates while barcode observations use source coordinates, so those tokens are conservatively retained.
+- Real camera, glossy print, damaged QR, partial crop, device variance, and private CRM acceptance still require the external runner and human review.
+- A completed private aggregate is evidence for review, never automatic approval.
+
+## Session 2026-08-29 — Card-back barcode and vCard composition (completed)
+
+Goal: implement the first still-missing, in-scope item from the module backlog without recreating mature core models, moving image types into the core, or adding host-owned camera/contact storage behavior.
+
+### What changed
+
+1. **Provider-neutral vCard parser**: `VCardParser` accepts vCard 3.0/4.0 strings and UTF-8/EUC-KR data, unfolds lines, decodes escaped and quoted-printable values, and maps only supported contact properties into sourced suggestions.
+2. **Same-card composition**: `CardScanSession` returns front, optional back, and deterministic merged results. Duplicate contacts collapse, barcode evidence wins duplicates, phone subtypes deduplicate across families, and conflicting singular values preserve the losing candidate and require review.
+3. **Local back adapter**: `CardBackScanner` combines the existing OCR pipeline with `VNDetectBarcodesRequest`. QR-only backs succeed without OCR text. vCard and explicit HTTP(S) URLs become fields; unsupported content exposes metadata without the raw payload.
+4. **Boundary preserved**: `CardFieldCore` still imports Foundation only. Vision and image decoding remain in `AppleVisionAdapter`; no camera, Contacts framework, logging, storage, telemetry, or network behavior was added.
+5. **Coverage**: fictional tests cover vCard versions, folded and escaped values, UTF-8/EUC-KR and quoted-printable decoding, invalid inputs, QR detection, URL/unsupported payloads, duplicate and subtype merging, conflict review, and input-order determinism.
+
+### Backlog audit
+
+- The attached model, classifier, preprocessing, language-inference, and pure-logic test prompts were already implemented in more mature forms and were not duplicated.
+- Contact writes and camera UI remain host-owned and excluded by the permanent package boundary.
+- Future back-scan work should add an external aggregate-only real-device acceptance harness before expanding supported barcode semantics.
+
 ## Session 2026-08-28 — Conditional dual-pass experiment (completed)
 
 Goal: evaluate a default-off second-request fast path without weakening the shipped dual-pass default or using unavailable private photos.

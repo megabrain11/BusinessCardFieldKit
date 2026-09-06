@@ -11,6 +11,7 @@ struct BenchmarkArguments {
   var measuredRuns: Int
   var prettyPrinted: Bool
   var targetedEvidence: Bool
+  var cardBackEvidence: Bool
 
   static func parse(_ arguments: [String]) throws -> Self {
     var manifestPath: String?
@@ -18,6 +19,7 @@ struct BenchmarkArguments {
     var measuredRuns = 3
     var prettyPrinted = false
     var targetedEvidence = false
+    var cardBackEvidence = false
     var index = 0
 
     while index < arguments.count {
@@ -38,6 +40,8 @@ struct BenchmarkArguments {
         prettyPrinted = true
       case "--targeted-evidence":
         targetedEvidence = true
+      case "--card-back-evidence":
+        cardBackEvidence = true
       case "--help", "-h":
         throw ArgumentError.helpRequested
       default:
@@ -55,7 +59,8 @@ struct BenchmarkArguments {
       warmupRuns: warmupRuns,
       measuredRuns: measuredRuns,
       prettyPrinted: prettyPrinted,
-      targetedEvidence: targetedEvidence
+      targetedEvidence: targetedEvidence,
+      cardBackEvidence: cardBackEvidence
     )
   }
 }
@@ -68,27 +73,37 @@ enum ArgumentError: Error {
 }
 
 let usage = """
-  Usage: card-field-benchmark [--warmup N] [--runs N] [--pretty] [--targeted-evidence] MANIFEST
+  Usage: card-field-benchmark [--warmup N] [--runs N] [--pretty] [--targeted-evidence | --card-back-evidence] MANIFEST
 
   Runs aggregate-only OCR diagnostics over a synthetic manifest.
   --targeted-evidence compares targeted re-recognition enabled versus disabled.
+  --card-back-evidence evaluates QR/vCard detection, merging, and latency.
   The JSON report contains no OCR text, token values, images, or source paths.
   """
 
 do {
   let arguments = try BenchmarkArguments.parse(Array(CommandLine.arguments.dropFirst()))
   let data = try Data(contentsOf: URL(fileURLWithPath: arguments.manifestPath))
-  let manifest = try GoldenCorpusManifest(data: data)
   let encoder = JSONEncoder()
   encoder.outputFormatting =
     arguments.prettyPrinted ? [.prettyPrinted, .sortedKeys] : [.sortedKeys]
-  if arguments.targetedEvidence {
+  if arguments.targetedEvidence && arguments.cardBackEvidence {
+    throw ArgumentError.unexpectedArgument("Conflicting evidence modes")
+  } else if arguments.cardBackEvidence {
+    let report = try CardBackBenchmarkRunner(
+      warmupRuns: arguments.warmupRuns,
+      measuredRuns: arguments.measuredRuns
+    ).run(manifest: CardBackCorpusManifest(data: data))
+    FileHandle.standardOutput.write(try encoder.encode(report))
+  } else if arguments.targetedEvidence {
+    let manifest = try GoldenCorpusManifest(data: data)
     let report = try TargetedReRecognitionBenchmarkRunner(
       warmupRuns: arguments.warmupRuns,
       measuredRuns: arguments.measuredRuns
     ).run(manifest: manifest)
     FileHandle.standardOutput.write(try encoder.encode(report))
   } else {
+    let manifest = try GoldenCorpusManifest(data: data)
     let report = try DiagnosticsBenchmarkRunner(
       warmupRuns: arguments.warmupRuns,
       measuredRuns: arguments.measuredRuns

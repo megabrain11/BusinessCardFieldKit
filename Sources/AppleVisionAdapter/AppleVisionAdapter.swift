@@ -396,16 +396,32 @@ import Foundation
       cgImage: CGImage,
       orientation: CGImagePropertyOrientation = .up
     ) throws -> AppleVisionTokenScanResult {
+      try scanTokensWithRecognitionImage(
+        cgImage: cgImage,
+        orientation: orientation
+      ).result
+    }
+
+    /// Package-internal token scan that also exposes the exact upright image whose
+    /// normalized coordinates the returned tokens use. The image is not retained
+    /// or added to the public result contract.
+    func scanTokensWithRecognitionImage(
+      cgImage: CGImage,
+      orientation: CGImagePropertyOrientation = .up
+    ) throws -> TokenScanWithRecognitionImage {
       let diagnostics = makeInstrumentation()
       let recognized = try performTokenRecognition(
         cgImage,
         orientation: orientation,
         diagnostics: diagnostics
       )
-      return AppleVisionTokenScanResult(
-        tokens: recognized.tokens,
-        cardRegionSelection: recognized.cardRegionSelection,
-        diagnostics: diagnostics?.snapshot(configuration: configuration)
+      return TokenScanWithRecognitionImage(
+        result: AppleVisionTokenScanResult(
+          tokens: recognized.tokens,
+          cardRegionSelection: recognized.cardRegionSelection,
+          diagnostics: diagnostics?.snapshot(configuration: configuration)
+        ),
+        recognitionImage: recognized.recognitionImage
       )
     }
 
@@ -467,11 +483,13 @@ import Foundation
 
       var tokens: [OCRToken]
       var selection: AppleVisionCardRegionSelection
+      var recognitionImage: CGImage
       if configuration.cardRegion.mode == .automatic,
         let isolatedResult = isolatedCardResult(from: working, diagnostics: diagnostics)
       {
         tokens = isolatedResult.tokens
         selection = .isolated(isolatedResult.region)
+        recognitionImage = isolatedResult.recognitionImage
         diagnostics?.recordCardIsolationSucceeded()
       } else {
         var recognized = try recognizeTokens(
@@ -487,6 +505,7 @@ import Foundation
           diagnostics: diagnostics
         )
         tokens = recognized
+        recognitionImage = working
         selection =
           configuration.cardRegion.mode == .disabled ? .disabled : .fullImageFallback
         if selection == .fullImageFallback {
@@ -497,7 +516,11 @@ import Foundation
       guard !tokens.isEmpty else {
         throw AppleVisionScanError.noRecognizedText
       }
-      return TokenRecognitionPayload(tokens: tokens, cardRegionSelection: selection)
+      return TokenRecognitionPayload(
+        tokens: tokens,
+        cardRegionSelection: selection,
+        recognitionImage: recognitionImage
+      )
     }
 
     /// Produces one upright, enhanced image shared by detection, recognition, and crops.
@@ -813,7 +836,8 @@ import Foundation
             confidence: Double(candidate.confidence),
             selectionScore: selectionScore
           ),
-          selectionScore: selectionScore
+          selectionScore: selectionScore,
+          recognitionImage: correctedImage
         )
         if best == nil || selectionScore > best!.selectionScore {
           best = recognition
@@ -1122,11 +1146,18 @@ import Foundation
     var tokens: [OCRToken]
     var region: AppleVisionDetectedCardRegion
     var selectionScore: Double
+    var recognitionImage: CGImage
   }
 
   struct TokenRecognitionPayload: Sendable {
     var tokens: [OCRToken]
     var cardRegionSelection: AppleVisionCardRegionSelection
+    var recognitionImage: CGImage
+  }
+
+  struct TokenScanWithRecognitionImage: Sendable {
+    var result: AppleVisionTokenScanResult
+    var recognitionImage: CGImage
   }
 
   enum RecognitionRequestRole: Equatable, Sendable {

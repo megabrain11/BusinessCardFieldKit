@@ -19,6 +19,10 @@ let package = Package(
       name: "card-field-private-benchmark",
       targets: ["card-field-private-benchmark"]
     ),
+    .executable(
+      name: "card-field-private-back-benchmark",
+      targets: ["card-field-private-back-benchmark"]
+    ),
   ],
   targets: [
     .target(name: "CardFieldCore"),
@@ -39,6 +43,10 @@ let package = Package(
     ),
     .executableTarget(
       name: "card-field-private-benchmark",
+      dependencies: ["AppleVisionBenchmarking"]
+    ),
+    .executableTarget(
+      name: "card-field-private-back-benchmark",
       dependencies: ["AppleVisionBenchmarking"]
     ),
     .testTarget(

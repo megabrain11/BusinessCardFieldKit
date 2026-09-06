@@ -23,7 +23,7 @@ public struct NormalizedBoundingBox: Codable, Equatable, Sendable {
   }
 }
 
-/// One OCR observation from the front of a card. The core never accepts card images.
+/// One OCR observation from a card image. The core never accepts card images.
 ///
 /// `alternatives` carries lower-ranked provider readings for the same region. It is
 /// additive metadata: classification only consumes `text`.

@@ -8,6 +8,19 @@ The project follows [Semantic Versioning](https://semver.org/). Before `1.0.0`, 
 
 ### Added
 
+- Provider-neutral vCard 3.0/4.0 parsing with UTF-8, EUC-KR, folded-line, escaped-value,
+  and quoted-printable handling, plus deterministic `CardScanSession` front/back merging.
+- A local `CardBackScanner` that combines back-side OCR with QR/barcode-derived vCard or URL
+  suggestions. Public barcode metadata excludes the decoded payload, and no image or result is
+  logged, retained, or persisted.
+- A deterministic fourteen-scene card-back corpus and `--card-back-evidence` schema-3 aggregate benchmark for
+  QR detection, payload-kind accuracy, back/front merge exactness, duplicate suppression, review
+  decisions, card-region decisions, and latency. `card-field-private-back-benchmark` provides the same aggregate-only
+  boundary for an external real-photo root with mandatory repeated measurements.
+- Default-off `AppleVisionBackScanDiagnostics` with fixed source-barcode, token-recognition,
+  isolated-mask, classification/merge, and total stage durations plus barcode-request counts. The
+  aggregate card-back report is schema 3 and keeps its diagnostics summary optional for schema-2
+  decoding.
 - A default-off `AppleVisionConditionalDualPassOptions` experiment that skips the second
   language-correction pass only for high-confidence, single-script, simple-layout scans with
   multiple complete strict-contact families and no conflicting alternatives, review warning,
@@ -48,6 +61,10 @@ The project follows [Semantic Versioning](https://semver.org/). Before `1.0.0`, 
 
 ### Fixed
 
+- Card-back OCR now excludes tokens substantially overlapping a barcode detected on the exact
+  recognition image. Perspective-isolated cards use a second content-free barcode-region request on
+  the rectified image, preventing QR modules from becoming false names or organizations while
+  preserving nearby text and public metadata contracts.
 - Email extraction now repairs OCR-introduced whitespace immediately around `@` while preserving
   the original reading and preventing the domain portion from also becoming a website.
 - All Sources, Tests, and Package.swift files conform to strict `swift format lint` again after

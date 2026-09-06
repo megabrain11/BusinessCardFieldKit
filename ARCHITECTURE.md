@@ -2,7 +2,7 @@
 
 ## Boundaries
 
-`CardFieldCore` begins after front-side OCR and ends with field suggestions. It never receives images, persists cards, resolves identities, writes contacts, or performs network operations. The optional `AppleVisionAdapter` accepts an image for the duration of a synchronous local recognition call, isolates and perspective-corrects one likely foreground card when evidence supports it, then passes provider-neutral tokens into the core. It does not capture, retain, or persist that image.
+`CardFieldCore` begins after OCR or barcode decoding and ends with field suggestions. It never receives images, persists cards, resolves identities across contacts, writes contacts, or performs network operations. The optional `AppleVisionAdapter` accepts an image for the duration of a synchronous local recognition call, isolates and perspective-corrects one likely foreground card when evidence supports it, then passes provider-neutral tokens into the core. Its optional back scanner also detects barcode payloads locally. It does not capture, retain, or persist either image.
 
 ```text
 Host capture -> card-region detection -> accepted: perspective-corrected card --+
@@ -23,13 +23,18 @@ Other OCR provider -> provider adapter -----------------------------------------
 Synthetic fixtures -> CardFieldEvaluation -> precision/recall report
 Synthetic image manifest -> AppleVisionBenchmarking -> aggregate diagnostics report
 External private root -> AppleVisionBenchmarking -> aggregate-only holdout report
+Synthetic card-back manifest -> AppleVisionBenchmarking -> aggregate barcode/merge report
+External private card-back root -> AppleVisionBenchmarking -> aggregate-only back report
+
+Card-back barcode -> local payload decoding -> VCardParser -> CardFieldResult --+
+Front result + optional back result -> CardScanSession -> MergedCardResult
 ```
 
 ## Modules
 
 ### CardFieldCore
 
-The core defines provider-neutral contracts, OCR normalization, typed extraction, candidate ranking, confidence, evidence, additive rule packs, correction overlays, and contribution sanitization. It also exposes two provider-neutral utilities: `LayoutAnalyzer` groups tokens into deterministic visual rows and columns for hosts reasoning about multi-column cards, and `TokenLanguageInference` labels tokens with a best-effort BCP 47 tag derived from Unicode script ranges. Foundation is used for Unicode, regular expressions, coding, locks, and optional local JSON reads. There is no implicit file access: only a host-created `LocalJSONCorrectionStore` reads its explicit URL.
+The core defines provider-neutral contracts, OCR normalization, typed extraction, candidate ranking, confidence, evidence, additive rule packs, correction overlays, and contribution sanitization. It also exposes `VCardParser` for vCard 3.0/4.0 text or UTF-8/EUC-KR bytes and `CardScanSession` for deterministic same-card front/back combination. Barcode-origin duplicates outrank OCR readings, while conflicting singular identity values retain the losing value as an alternative and require review. This is not cross-contact identity resolution. `LayoutAnalyzer` groups tokens into deterministic visual rows and columns, and `TokenLanguageInference` labels tokens with a best-effort BCP 47 tag derived from Unicode script ranges. Foundation is used for Unicode, regular expressions, coding, locks, and optional local JSON reads. There is no implicit file access: only a host-created `LocalJSONCorrectionStore` reads its explicit URL.
 
 ### AppleVisionAdapter
 
@@ -44,6 +49,14 @@ By default, the adapter first asks Vision for a bounded set of plausible card qu
 
 Synchronous `scan` methods and async `scanAsync` variants run the same local path; async forms execute on a background task so callers never block an actor. The same pipeline is also exposed as `scanTokens` / `scanTokensAsync`, a generic token-only entry point that stops before classification so non-card documents can reuse local OCR without business-card heuristics influencing their results; hosts own any downstream interpretation of those tokens. The target contains all Apple Vision, Core Image, ImageIO, and Core Graphics imports. A process-wide shared `CIContext` keeps batch scans affordable. The adapter does not access a camera, retain an image, persist output, or use the network. Existing Vision observations can still be converted without running another request.
 
+`CardBackScanner` runs the same text pipeline and a local `VNDetectBarcodesRequest`. vCard and explicit HTTP(S) payloads become structured suggestions; unsupported payloads expose only content-free symbology, kind, and geometry metadata. A QR-only back is valid even when OCR finds no text. The token pipeline internally exposes the exact upright recognition image for the duration of the call. When a card is perspective-isolated, the back scanner detects masking regions again on that rectified image; otherwise it reuses source-image regions. OCR tokens substantially overlapping those same-coordinate regions are removed before classification, so QR modules cannot become false names or organizations without approximating a source-to-card transform. The public token and barcode metadata contracts remain unchanged, and the recognition image is never retained or returned. `CardScanSession` can then combine the fields with the separately scanned front.
+
+The shared diagnostics option also controls an optional `AppleVisionBackScanDiagnostics` result. It
+reports only fixed stage durations and source/masking barcode-request counts. The outer timer begins
+after encoded image decoding, and the nested token scanner runs with its own diagnostics disabled to
+avoid double measurement. Diagnostics never contain decoded payloads, OCR content, confidence,
+geometry, images, paths, or token values, and enabling them cannot change scan fields.
+
 `AppleVisionScanConfiguration.diagnostics` can opt a caller into aggregate stage timings, Vision request counts, and execution flags on either result type. The default is disabled and creates no instrumentation object. The report has a versioned, Codable, fixed-field contract and deliberately excludes OCR text, token values and confidence, geometry, image data, and paths. Repeated recognition requests accumulate under stable stage identifiers; nested targeted re-recognition time can overlap primary/secondary recognition time, so stage durations are diagnostic spans rather than additive accounting. Enabling diagnostics cannot select a different recognition path.
 
 ### card-field-scan
@@ -56,7 +69,11 @@ The evaluation module compares normalized field values in synthetic fixtures. Fo
 
 ### AppleVisionBenchmarking
 
-The Apple-platform benchmark module expands a versioned manifest into 25 layouts with two deterministic Core Text/Core Graphics variants each. It compares the shipped pipeline against three disabled-stage configurations while consuming only the redacted diagnostics contract and expected-field mismatch counts. A separately versioned 12-layout × 2-variant stress corpus supports a paired targeted re-recognition enabled/disabled report with field-family exactness, false clears, review changes, recoveries, regressions, requests, and duration distributions. An independent environment-gated runner may read a manifest and images from one external private root, but it emits only aggregate paired metrics and never serializes source identity. Private input cannot configure the shipped confidence limit. Both CLIs separate warmup and measured runs and never serialize OCR text, tokens, confidence, images, paths, or case identifiers. Benchmark configurations cannot change the scanner's shipped defaults.
+The Apple-platform benchmark module expands a versioned manifest into 25 layouts with two deterministic Core Text/Core Graphics variants each. It compares the shipped pipeline against three disabled-stage configurations while consuming only the redacted diagnostics contract and expected-field mismatch counts. A separately versioned 12-layout × 2-variant stress corpus supports a paired targeted re-recognition enabled/disabled report with field-family exactness, false clears, review changes, recoveries, regressions, requests, and duration distributions. An independent environment-gated runner may read a manifest and images from one external private root, but it emits only aggregate paired metrics and never serializes source identity. Private input cannot configure the shipped confidence limit.
+
+The same module owns a separate fourteen-scene card-back corpus with deterministic QR rendering for vCard 3.0/4.0, URLs, unsupported payloads, geometric and contrast stress, multiple codes, visible text, duplicate suppression, conflict review, and two whole-card perspective-isolation cases. Its schema-3 aggregate report measures barcode count, payload-kind accuracy, back and merged exactness, duplicate freedom, review decisions, card-region decisions, total latency, content-free stage timing, and barcode-request distributions without decoded content or case identity. The diagnostics summary is optional so schema-2 reports continue to decode. `card-field-private-back-benchmark` accepts only relative regular files beneath one external root, requires three measured repetitions, strips private tags and corpus identity, and emits a redacted skip when no root is configured. Synthetic and private aggregate results are evidence inputs, never automatic release decisions.
+
+All benchmark CLIs separate warmup and measured runs and never serialize OCR text, tokens, confidence, images, paths, or case identifiers. Benchmark configurations cannot change the scanner's shipped defaults.
 
 ## Determinism
 

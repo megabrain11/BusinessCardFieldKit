@@ -1,6 +1,6 @@
 # BusinessCardFieldKit
 
-BusinessCardFieldKit is a privacy-first, explainable engine for normalizing front-side business-card OCR and classifying text into structured fields. It is not a contact database, identity service, CRM, image store, or relationship product.
+BusinessCardFieldKit is a privacy-first, explainable engine for normalizing business-card OCR and classifying text into structured fields. It is not a contact database, identity service, CRM, image store, or relationship product.
 
 Phase 1 is a pure Swift Package. `CardFieldCore` has no dependency on UIKit, SwiftUI, Vision, image types, file storage, or networking. Hosts may supply provider-neutral OCR observations directly. On Apple platforms, the optional `AppleVisionAdapter` can isolate and perspective-correct one likely foreground card, recognize it locally, and pass provider-neutral observations to the core. It conservatively falls back to full-image OCR when isolation is not reliable. Hosts still decide how to capture images, review suggestions, persist approved values, and handle an optional back image.
 
@@ -16,6 +16,7 @@ Phase 1 is a pure Swift Package. `CardFieldCore` has no dependency on UIKit, Swi
 - Language-neutral JSON contracts and rule-pack schemas
 - Synthetic evaluation fixtures and a field-level precision/recall CLI
 - An optional local Apple Vision scanner with foreground-card isolation, saliency fallback, perspective correction at enforced output resolution, image enhancement (upscale, grayscale, contrast, sharpening), dual-pass recognition that shields emails and phones from language correction, multi-candidate readings, targeted low-confidence re-recognition, script-based token languages, a pinned Vision revision, async APIs, and conservative full-image fallback
+- Optional card-back QR/barcode scanning with vCard 3.0/4.0 parsing, same-coordinate QR OCR masking after perspective isolation, deterministic front/back suggestion merging, and default-off content-free stage diagnostics; decoded payloads are returned only as structured fields and are never logged or persisted
 
 ## Coordinate contract
 
@@ -84,13 +85,14 @@ For a complete integration walkthrough, see the [CardFieldCore DocC catalog](Sou
 ## Package products
 
 - `CardFieldCore`: contracts, normalization, rules, classification, confidence, evidence, corrections, sanitization, layout grouping, and script-based language inference
-- `AppleVisionAdapter`: locally enhances and recognizes a front image with Vision, converts observations into core tokens with alternative readings, and classifies them
+- `AppleVisionAdapter`: locally enhances and recognizes a card image with Vision, converts observations into core tokens with alternative readings, classifies them, and optionally decodes card-back barcodes
 - `CardFieldEvaluation`: decodes synthetic fixtures and reports field-level precision and recall
-- `AppleVisionBenchmarking`: renders the versioned 25-layout × 2-variant synthetic image corpus and emits aggregate-only paired OCR diagnostics comparisons, including the default-off conditional dual-pass experiment
+- `AppleVisionBenchmarking`: renders versioned synthetic front and back corpora and emits aggregate-only OCR, barcode, merge, and latency evidence, including the default-off conditional dual-pass experiment
 - `card-field-eval`: command-line fixture runner
 - `card-field-scan`: local Apple-platform image scanner that emits structured JSON
 - `card-field-benchmark`: local Apple-platform benchmark for p50/p95 latency, request counts, execution rates, and exact-field parity without OCR payloads
 - `card-field-private-benchmark`: environment-gated real-photo holdout runner that emits aggregate-only paired evidence
+- `card-field-private-back-benchmark`: environment-gated card-back runner that emits aggregate-only barcode, merge, review, and latency evidence
 
 Run the package and evaluation suite:
 
@@ -100,6 +102,7 @@ swift run card-field-eval Fixtures/Synthetic/phase1.json
 swift run card-field-scan --help
 swift run card-field-benchmark --help
 swift run card-field-private-benchmark --help
+swift run card-field-private-back-benchmark --help
 ```
 
 Use `card-field-benchmark --targeted-evidence` with the separately versioned targeted stress manifest to compare targeted re-recognition enabled and disabled without changing scanner defaults. Reports remain aggregate-only and contain no OCR payloads or case identifiers.
@@ -107,6 +110,8 @@ Use `card-field-benchmark --targeted-evidence` with the separately versioned tar
 The regular benchmark interleaves shipped and conditional dual-pass scans per scene. The experiment remains disabled in `AppleVisionScanConfiguration` unless a host explicitly enables `AppleVisionConditionalDualPassOptions`; synthetic request savings are not a release recommendation.
 
 Private real-photo evaluation uses a separate external root and the shipped confidence threshold. See [Private Holdout Evaluation](Docs/PRIVATE_HOLDOUT_EVALUATION.md). No private image, expected value, filename, path, or per-case output belongs in this repository.
+
+Card-back regression uses fourteen deterministic runtime-rendered scenes through `card-field-benchmark --card-back-evidence`. Real-photo back evaluation uses a separate external root and at least three repetitions; see [Card-Back Evaluation](Docs/CARD_BACK_EVALUATION.md). Synthetic success is not a physical-device or production release approval.
 
 ## Rules and corrections
 
@@ -124,7 +129,7 @@ Google ML Kit, Tesseract, cloud OCR, and browser OCR can implement the same adap
 
 ## Scope and privacy
 
-Only front-side local OCR adapters, OCR normalization, and field classification belong here. Relationship notes, meeting memories, relationship graphs, recommendations, identity resolution, shared contact databases, server deduplication, private user data, production datasets, image storage, and back-side analysis are out of scope.
+Only local OCR/barcode adapters, provider-neutral parsing, same-card front/back suggestion combination, OCR normalization, and field classification belong here. Relationship notes, meeting memories, relationship graphs, recommendations, cross-contact identity resolution, shared contact databases, server deduplication, private user data, production datasets, image storage, camera capture, and contact writes are out of scope.
 
 The package has no telemetry or networking. Real business-card photos and their OCR or PII may be used only for private, transient local validation; they are never committed to this public repository. Do not submit real card images, OCR output, names, email addresses, phone numbers, or addresses. Read [PRIVACY.md](PRIVACY.md) before contributing.
 
@@ -134,6 +139,7 @@ A CRM such as Relationship Memory can reuse the public interpretation contracts,
 
 - [Architecture](ARCHITECTURE.md)
 - [Local image scanning](Docs/IMAGE_SCANNING.md)
+- [Card-back scanning](Docs/CARD_BACK_SCANNING.md)
 - [Private holdout evaluation](Docs/PRIVATE_HOLDOUT_EVALUATION.md)
 - [AI collaboration handoff](Docs/AI_COLLABORATION.md)
 - [Roadmap](ROADMAP.md)
