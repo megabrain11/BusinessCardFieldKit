@@ -1,7 +1,6 @@
 # BusinessCardFieldKit v0.2.0 — Privacy-first local OCR and field extraction
 
-These notes are prepared for a future GitHub Release. They do not indicate that `v0.2.0` has been
-tagged or published.
+These notes accompany the `v0.2.0` tag.
 
 ## Highlights
 
@@ -36,11 +35,11 @@ aggregate-only evidence.
 
 ## Validation status
 
-The release-candidate tree passed `Scripts/check-repository.sh` on 2026-09-22 with Swift 6.3.3 and
-Xcode 26.6 on macOS. The check completed 201 tests, both synthetic field-evaluation corpora, CLI
-smoke tests, deterministic OCR/card-back benchmark paths, strict formatting, DocC warnings-as-errors,
-JSON syntax validation, and the credential scan. Maintainers must rerun the check on the exact tag
-commit before publishing.
+The release tree passed the `Scripts/check-repository.sh` steps on 2026-09-25 with Swift 6.3.3 and
+Xcode 26.6 on macOS: 202 tests, both synthetic field-evaluation corpora, CLI smoke tests,
+deterministic OCR/card-back benchmark paths, strict formatting, DocC warnings-as-errors, JSON syntax
+validation, and the credential scan. GitHub Actions runs the same script on every pull request and
+on `main`.
 
 ## Known limitations
 
@@ -53,6 +52,8 @@ commit before publishing.
   recovery paths are not production recommendations and remain off by default.
 - The package provides suggestions, not verified identity facts. Hosts must review before saving,
   merging, or acting on a field.
+- Shadow-mode integration guidance, local quality measures, adapter conformance fixtures, and
+  explicit migrations were planned for this release and moved to `0.3.0`; see the roadmap.
 
 ## Compatibility expectations
 

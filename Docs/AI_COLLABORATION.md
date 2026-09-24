@@ -2,6 +2,39 @@
 
 Living document for humans and AI agents (Codex, Claude Code, others). Update the relevant section when you finish significant work. Newest entries at the top.
 
+## Session 2026-09-25 — v0.2.0 release (completed)
+
+Goal: publish the verified release candidate as `v0.2.0` with records that match what shipped.
+
+### What changed
+
+1. **Roadmap reconciled**: the original `0.2.0` goals (shadow-mode integration pattern, local
+   quality measures, adapter conformance fixtures, explicit migrations) were listed as "before
+   release" but never implemented; the candidate shipped layout-aware interpretation, diagnostics,
+   card-back scanning, and evaluation boundaries instead. With owner approval those goals moved to
+   "Toward `0.3.0`: measured CRM adoption", the rule-pack ecosystem moved to `0.4.0`, and the
+   release notes state the deferral.
+2. **Release finalized**: the owner approved shipping `claude/refine-selected-card-only` in this
+   release. The changelog section is now `[0.2.0] - 2026-09-25`, the README installs
+   `from: "0.2.0"`, and the release notes no longer describe a future tag.
+3. **Publication path**: push the release candidate, open a pull request to `main`, merge after CI
+   passes, then tag the merge commit `v0.2.0`. Publishing the GitHub Release page from
+   `Docs/RELEASE_NOTES_0.2.0.md` remains an owner action.
+
+### Verification
+
+All `Scripts/check-repository.sh` steps passed locally on the release commit, with the recorded
+`grep` credential-scan fallback: strict format lint, build, 202 tests, both synthetic evaluators,
+CLI and benchmark smoke runs, DocC warnings-as-errors, JSON syntax, and `git diff --check`. CI
+results are recorded on the pull request.
+
+### Next steps
+
+- Publish the GitHub Release from the prepared notes.
+- Start `0.3.0` with the measured CRM adoption items in the roadmap.
+- `codex/private-barcode-recovery-validation` remains a local-only detailed history; decide
+  whether to keep, push, or retire it now that the squashed release is on `main`.
+
 ## Session 2026-09-24 — Refine only the selected card candidate (completed)
 
 Goal: remove targeted re-recognition work that cannot affect the result, without changing tokens,

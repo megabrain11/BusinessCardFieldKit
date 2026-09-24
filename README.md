@@ -54,7 +54,7 @@ let package = Package(
   dependencies: [
     .package(
       url: "https://github.com/megabrain11/BusinessCardFieldKit.git",
-      from: "0.1.0"
+      from: "0.2.0"
     )
   ],
   targets: [
@@ -247,7 +247,7 @@ A CRM such as Relationship Memory can reuse the public interpretation contracts,
 - [AI collaboration handoff](Docs/AI_COLLABORATION.md)
 - [Roadmap](ROADMAP.md)
 - [Changelog](CHANGELOG.md)
-- [Proposed v0.2.0 release notes](Docs/RELEASE_NOTES_0.2.0.md)
+- [v0.2.0 release notes](Docs/RELEASE_NOTES_0.2.0.md)
 - [Support policy](SUPPORT.md)
 - [Contributing](CONTRIBUTING.md)
 - [Security policy](SECURITY.md)

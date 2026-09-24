@@ -6,6 +6,8 @@ The project follows [Semantic Versioning](https://semver.org/). Before `1.0.0`, 
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-25
+
 ### Added
 
 - An opt-in column-aware phone linker with deterministic geometry scoring and diagnostics, plus an
@@ -124,5 +126,6 @@ The project follows [Semantic Versioning](https://semver.org/). Before `1.0.0`, 
 - Synthetic-fixture tests use fictional domains only (`example.com`, `example.net`,
   `example.org`); no real provider domains appear in test data.
 
-[Unreleased]: https://github.com/megabrain11/BusinessCardFieldKit/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/megabrain11/BusinessCardFieldKit/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/megabrain11/BusinessCardFieldKit/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/megabrain11/BusinessCardFieldKit/tree/v0.1.0
