@@ -20,6 +20,10 @@ Goal: publish the verified release candidate as `v0.2.0` with records that match
 3. **Publication path**: push the release candidate, open a pull request to `main`, merge after CI
    passes, then tag the merge commit `v0.2.0`. Publishing the GitHub Release page from
    `Docs/RELEASE_NOTES_0.2.0.md` remains an owner action.
+4. **Swift 6.0 compatibility**: the candidate's first CI run failed because the Swift 6.0 type
+   checker could not finish a five-way array concatenation in `CardBackBenchmarkTests`; the local
+   Swift 6.3.3 compiler accepted it. The expression is now built step by step with the same order
+   and values. A clean local build found no expression slower than 50 ms to type-check.
 
 ### Verification
 

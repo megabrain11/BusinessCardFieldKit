@@ -56,11 +56,11 @@ import Testing
       let frontKeys = Set(record.front?.keys.map { $0 } ?? [])
       #expect(frontKeys.isSubset(of: knownFields))
 
-      let values =
-        record.payloads.map(\.value) + (record.auxiliaryLines ?? [])
-        + record.backExpected.values.flatMap { $0 }
-        + record.mergedExpected.values.flatMap { $0 }
-        + (record.front?.values.flatMap { $0 } ?? [])
+      var values: [String] = record.payloads.map(\.value)
+      values += record.auxiliaryLines ?? []
+      values += record.backExpected.values.flatMap { $0 }
+      values += record.mergedExpected.values.flatMap { $0 }
+      values += record.front?.values.flatMap { $0 } ?? []
       let folded = values.joined(separator: "\n").lowercased()
       #expect(!folded.contains("/" + "users/"))
       for value in values where value.contains("@") {
