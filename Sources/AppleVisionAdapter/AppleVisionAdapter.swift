@@ -830,15 +830,10 @@ import Foundation
         guard textEvidenceScore >= regionConfiguration.minimumTextEvidenceScore else {
           continue
         }
-        var tokens = AppleVisionAdapter.tokens(
+        let tokens = AppleVisionAdapter.tokens(
           from: lines,
           language: configuration.tokenLanguage,
           infersLanguages: configuration.infersTokenLanguages
-        )
-        tokens = refineLowConfidenceTokens(
-          tokens,
-          in: correctedImage,
-          diagnostics: diagnostics
         )
         guard !tokens.isEmpty else { continue }
 
@@ -861,7 +856,15 @@ import Foundation
           best = recognition
         }
       }
-      return best
+      // Selection uses only geometry and pre-refinement evidence, so refining the
+      // winner alone gives the same result without re-reading discarded candidates.
+      guard var selected = best else { return nil }
+      selected.tokens = refineLowConfidenceTokens(
+        selected.tokens,
+        in: selected.recognitionImage,
+        diagnostics: diagnostics
+      )
+      return selected
     }
 
     func makeResult(

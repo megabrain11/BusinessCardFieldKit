@@ -2,6 +2,38 @@
 
 Living document for humans and AI agents (Codex, Claude Code, others). Update the relevant section when you finish significant work. Newest entries at the top.
 
+## Session 2026-09-24 — Refine only the selected card candidate (completed)
+
+Goal: remove targeted re-recognition work that cannot affect the result, without changing tokens,
+fields, region selection, or any default.
+
+### What changed
+
+1. **Selection before refinement**: `isolatedCardResult` previously refined every candidate that
+   passed the contact-text evidence gate, although selection uses only geometry and
+   pre-refinement evidence. It now builds unrefined tokens for each passing candidate, selects the
+   winner with the same strict comparison, and refines only the winner. Refinement never removes
+   tokens, so the emptiness guard keeps its meaning.
+2. **Regression test**: `SelectedCandidateRefinementTests` renders two fictional cards that both
+   pass the gate, using the calibration-only `1.0` threshold with single-pass recognition. The
+   previous implementation issued two targeted requests on this scene; the new one issues one.
+3. **Docs**: the diagnostics contract, architecture overview, and changelog now state that
+   targeted re-recognition runs at most once per scan.
+
+### Verification and evidence
+
+On the two-card scene, tokens, fields, and the isolated region encoded at full precision were
+byte-identical before and after the change, while primary/targeted requests fell from 4/2 to 3/1.
+With the default dual-pass configuration, each skipped refinement saves two requests. The complete
+suite (202 tests), strict format lint, and golden-scene regressions pass.
+
+### Next steps
+
+- This branch starts from the release candidate. Merge it before tagging `v0.2.0`, or after it and
+  move its changelog line into the new `Unreleased` section.
+- Real-photo savings depend on how often several candidates pass the gate with weak lines; measure
+  with the private holdout runner before claiming production latency impact.
+
 ## Session 2026-09-24 — Release-candidate reconciliation (completed)
 
 Goal: reconcile repository state after alternating Codex and Claude Code sessions, then carry the

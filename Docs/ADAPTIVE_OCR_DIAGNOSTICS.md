@@ -16,7 +16,7 @@ An enabled, completed scan returns schema version 2 with:
 
 Schema-1 payloads remain decodable and default all conditional fields to disabled or empty.
 
-`targetedReRecognitionRequestCount` is a subset of `textRecognitionRequestCount`, not an additional request family. Total Vision requests equal rectangle + saliency + text requests. Candidate OCR and repeated refinement requests accumulate under their matching stage and request kind. Targeted re-recognition is a containing duration, so it can overlap primary/secondary recognition durations. The total duration is measured independently and is not the sum of stages.
+`targetedReRecognitionRequestCount` is a subset of `textRecognitionRequestCount`, not an additional request family. Total Vision requests equal rectangle + saliency + text requests. Candidate OCR requests accumulate under their matching stage and request kind. Targeted re-recognition runs at most once per scan, on the selected card or the full-image fallback. Targeted re-recognition is a containing duration, so it can overlap primary/secondary recognition durations. The total duration is measured independently and is not the sum of stages.
 
 The payload is Codable and contains only fixed identifiers, numeric aggregates, and booleans. It cannot contain OCR text, candidate readings, token values or confidence, bounding boxes, source paths, image data, or arbitrary host metadata. The scanner does not log or persist the report.
 

@@ -49,6 +49,9 @@ The project follows [Semantic Versioning](https://semver.org/). Before `1.0.0`, 
   the verified public API; documented AnswerSheetFieldKit's provider-neutral token-layer reuse.
 - Updated governance, support, security, roadmap, release, issue, and AI-contributor guidance for
   public pre-release maintenance while preserving human approval over sensitive decisions.
+- Isolated-card scans run targeted re-recognition only for the selected card candidate. Tokens,
+  fields, and region selection are unchanged; diagnostics report fewer targeted requests when
+  several candidates pass the contact-text evidence gate.
 
 ### Fixed
 
