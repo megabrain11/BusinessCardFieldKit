@@ -20,12 +20,15 @@ Requirements: Swift 6.0 or later on a supported Apple platform, plus [ripgrep](h
 
 ```sh
 swift build
-swift test
+swift test --no-parallel
 swift format lint --recursive --strict Sources Tests Package.swift
 swift run card-field-eval Fixtures/Synthetic/phase1.json
+swift run card-field-eval Fixtures/Synthetic/public-alpha.json
 ```
 
-Run `Scripts/check-repository.sh` for the complete local check. The script fails fast with a clear message when `rg` is missing.
+Run `Scripts/check-repository.sh` for the same complete check used by CI. It also validates DocC,
+JSON syntax, CLI entry points, deterministic synthetic benchmark paths, and credential patterns. The
+script requires Xcode's `docc` command and fails fast with a clear message when `rg` is missing.
 
 ## Rules and fixtures
 
@@ -36,3 +39,12 @@ Repository artifacts must be English. User-facing integrations should keep copy 
 ## Pull requests
 
 Explain the problem, privacy review, contract impact, rule-version impact, and test evidence. Keep unrelated changes separate. API-breaking changes require an architecture discussion before implementation.
+
+Maintainers retain approval over architecture boundaries, privacy-sensitive changes, experimental
+default changes, merges, tags, and releases. AI-assisted contributions are welcome, but a human
+contributor must review the resulting diff, synthetic data, and verification output before opening
+a pull request. AI contributors should read [AGENTS.md](AGENTS.md) before changing the repository.
+
+Participation is governed by [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). Use the issue templates for
+bugs, feature requests, and rule-pack proposals; report security or privacy vulnerabilities through
+the private channel in [SECURITY.md](SECURITY.md).

@@ -2,6 +2,43 @@
 
 Living document for humans and AI agents (Codex, Claude Code, others). Update the relevant section when you finish significant work. Newest entries at the top.
 
+## Session 2026-09-22 — Open-source adoption and v0.2.0 release preparation (completed)
+
+Goal: prepare the existing architecture and functionality for external Swift Package adoption and
+a future public `v0.2.0` release without publishing, changing scanner defaults, or overstating use.
+
+### What changed
+
+1. **External onboarding**: the README now leads with the local, privacy-first, deterministic,
+   explainable, multilingual, review-first contract; adds verified CI/toolchain/platform/license
+   badges; documents Xcode and SwiftPM installation; and keeps a tested core and Apple Vision quick
+   start ahead of internal benchmark detail.
+2. **Release and governance accuracy**: the changelog and roadmap now acknowledge the existing
+   `v0.1.0` tag, proposed `v0.2.0` notes cover features, privacy, platforms, limitations, and
+   pre-1.0 compatibility, and support/security/contribution guidance reflects current maintenance.
+   A privacy-gated general feature-request form complements the existing bug and rule-pack forms.
+3. **Reusable boundary**: the README records that AnswerSheetFieldKit reuses the provider-neutral
+   token layer while keeping answer-sheet semantics separate. This is stated as one concrete reuse
+   example, not a popularity or production-adoption claim.
+4. **Contract repair**: `ocr-input.schema.json` now exposes `OCRToken.alternatives`; missing JSON
+   identifiers decode to the public initializer's empty default. Regression tests pin the schema,
+   decoder compatibility, and README quick start. Mangled OCR test domains now use `.example`.
+5. **Contributor boundary**: `AGENTS.md` remains authoritative. Human approval is explicit for
+   architecture, privacy-sensitive behavior, experimental defaults, merges, tags, and releases.
+
+### Verification and release boundary
+
+`Scripts/check-repository.sh` exited 0 with 201 tests. Both synthetic field evaluators, CLI smoke
+tests, aggregate OCR/card-back benchmarks, strict formatting, DocC warnings-as-errors, JSON syntax,
+and credential checks passed. A new scratch Swift package resolved the public GitHub URL at
+`v0.1.0`, built `CardFieldCore` and `AppleVisionAdapter`, and ran the README quick start successfully.
+No real card data, private application data, binary fixture, secret, or non-reserved test domain was
+added.
+
+No tag or GitHub Release was created. After human review, merge the candidate to the default branch,
+rerun CI on that commit, update repository description/topics and protections, then tag and publish
+`v0.2.0` from the prepared notes.
+
 ## Session 2026-08-31 — Private source-barcode recovery validation boundary (completed)
 
 Goal: make the default-off source-barcode recovery experiment measurable on external physical
@@ -519,8 +556,8 @@ Goal: make the uncommitted OCR improvements GitHub-ready. No commits or pushes w
 
 1. **`swift format lint --strict` failures** in `AppleVisionAdapter.swift`, `ImagePreprocessing.swift`, `LayoutAnalyzer.swift`, `OCRUpgradeTests.swift` (semicolons, long lines, indentation, trailing commas, multiline expressions). Fixed by normalizing those four files with `swift format format --in-place`; diff reviewed to confirm whitespace/line-break-only changes with identical semantics.
 2. **Missing direct coverage for Vision revision clamping** (`recognitionRevision` 1...3). Added regression test "Recognition revisions are clamped to the supported 1...3 range" (87 tests total now).
-3. **Real provider domain in new test fixtures**. Replaced with fictional domains (`example.net`,
-   `example.org`, mangled variants like `exampl3.net`) per PRIVACY.md/AGENTS.md rules.
+3. **Real provider domain in new test fixtures**. Replaced with reserved domains (`example.net`,
+   `example.org`, and `.example` OCR-error variants) per PRIVACY.md/AGENTS.md rules.
 4. **Environment caveat:** `Scripts/check-repository.sh` step at line 30 silently no-ops when `rg` is not installed (command-not-found inside an `if` does not fail under `set -e`). The script still exits 0. Locally verified the credential scan equivalent with `grep -rEn '(AKIA[0-9A-Z]{16}|-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----)' .` → no matches. Consider adding a guard such as `command -v rg >/dev/null || { echo "ripgrep required" >&2; exit 1; }`.
 
 ### Safety audit of the ten OCR improvements — results

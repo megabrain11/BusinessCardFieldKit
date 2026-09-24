@@ -16,21 +16,30 @@ The roadmap is capability-based rather than date-based. Priorities may change as
 
 This boundary lets Relationship Memory reuse and improve a stable field-interpretation foundation while keeping its product data, user experience, and relationship intelligence private.
 
-## Toward `0.1.0`: trustworthy baseline
+## Released in `0.1.0`: trustworthy baseline
 
-- Harden ambiguous-field behavior so weak evidence remains unresolved.
-- Add meaningful Apple Vision coordinate, confidence, and observation-conversion tests.
-- Expand the synthetic corpus across layout variations, failure cases, Korean, English, and mixed-language cards.
-- Document the public API and contract-version policy.
-- Establish repeatable release, CI, security-reporting, and privacy-review checks.
+The `v0.1.0` tag established the provider-neutral core, local Apple Vision front-card scanning,
+reusable token-only recognition, deterministic fictional fixtures, versioned contracts, and the
+repository's CI/privacy checks. See [CHANGELOG.md](CHANGELOG.md) for the release contents.
 
-Exit signal: the package builds cleanly, every supported field has positive and false-promotion coverage, schemas and examples validate, and known limitations are documented.
+## Toward `0.2.0`: measured, privacy-safe expansion
 
-## Toward `0.2.0`: measured CRM adoption
+The current release candidate adds conservative layout-aware and strict-field interpretation,
+privacy-safe diagnostics and aggregate benchmarks, local card-back barcode/vCard handling, and
+external aggregate-only private evaluation boundaries.
 
-- Publish a shadow-mode integration pattern that compares an existing parser with `CardFieldCore` without changing saved contacts.
-- Define local, privacy-preserving quality measures: per-field correction rate, unresolved rate, false promotion rate, and review completion rate.
-- Add adapter conformance fixtures so OCR providers can demonstrate coordinate and identifier compatibility.
+Before release:
+
+- Keep conditional dual-pass, projective barcode masking, and source barcode recovery opt-in until
+  representative private physical-device evidence receives human approval.
+- Verify the exact tag commit with `Scripts/check-repository.sh` and publish the prepared release
+  notes without private corpus data or machine-specific performance claims.
+- Publish a shadow-mode integration pattern that compares an existing parser with `CardFieldCore`
+  without changing saved contacts.
+- Define local, privacy-preserving quality measures: per-field correction rate, unresolved rate,
+  false-promotion rate, and review completion rate.
+- Add adapter conformance fixtures so OCR providers can demonstrate coordinate and identifier
+  compatibility.
 - Make result and rule-pack migrations explicit and testable.
 
 For Relationship Memory, adoption should progress from shadow output, to reviewer-visible suggestions, to selected default fields only after field-specific thresholds are met. The host should pin a package version and retain a rollback path.

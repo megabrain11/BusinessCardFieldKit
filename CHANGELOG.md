@@ -8,6 +8,9 @@ The project follows [Semantic Versioning](https://semver.org/). Before `1.0.0`, 
 
 ### Added
 
+- An opt-in column-aware phone linker with deterministic geometry scoring and diagnostics, plus an
+  independent fail-closed strict-field corrector for syntax-valid email, explicit URL, and phone
+  alternatives.
 - Provider-neutral vCard 3.0/4.0 parsing with UTF-8, EUC-KR, folded-line, escaped-value,
   and quoted-printable handling, plus deterministic `CardScanSession` front/back merging.
 - A local `CardBackScanner` that combines back-side OCR with QR/barcode-derived vCard or URL
@@ -37,6 +40,48 @@ The project follows [Semantic Versioning](https://semver.org/). Before `1.0.0`, 
   the shipped targeted re-recognition threshold, reads only one external corpus root, and emits
   aggregate paired metrics with deterministic case-cluster bootstrap intervals and no source
   identity or OCR content.
+- A default-off, bounded source-barcode recovery experiment that performs one enhanced full-frame
+  request only after an empty initial result, with paired synthetic and private aggregate evidence.
+
+### Changed
+
+- Reorganized the README around installation, local/privacy properties, review-first usage, and
+  the verified public API; documented AnswerSheetFieldKit's provider-neutral token-layer reuse.
+- Updated governance, support, security, roadmap, release, issue, and AI-contributor guidance for
+  public pre-release maintenance while preserving human approval over sensitive decisions.
+
+### Fixed
+
+- Card-back OCR now excludes tokens substantially overlapping a barcode detected on the exact
+  recognition image. Perspective-isolated cards use a second content-free barcode-region request on
+  the rectified image, preventing QR modules from becoming false names or organizations while
+  preserving nearby text and public metadata contracts.
+- Email extraction now repairs OCR-introduced whitespace immediately around `@` while preserving
+  the original reading and preventing the domain portion from also becoming a website.
+- The OCR input schema now exposes `OCRToken.alternatives`, and JSON tokens without an explicit
+  identifier decode with the public initializer's empty-identifier default.
+
+## [0.1.0] - 2026-08-24
+
+### Added
+
+- A provider-neutral `CardFieldCore` library for deterministic OCR-to-field interpretation.
+- Confidence, evidence, alternative candidates, source-token provenance, and unresolved-line reporting.
+- Additive locale and industry rule packs plus host-owned personal correction stores.
+- An optional Apple Vision adapter that remains separate from the core.
+- Automatic foreground-card detection, bounded candidate ranking, perspective correction, and conservative full-image fallback in the Apple Vision adapter.
+- `card-field-scan`, a local Apple-platform image-to-structured-JSON command with opt-in raw OCR tokens.
+- Card-region selection metadata for isolated, fallback, and explicitly disabled scanning modes.
+- Base rules `base-1.1.0` with conservative inline identity splitting, multilingual name variants,
+  expanded title and department vocabulary, wrapped international addresses, and mixed
+  email/website-line handling.
+- `identityConflict` and `reviewRecommended` warnings for close competing person or organization
+  candidates.
+- Language-neutral JSON schemas, synthetic fixtures, and a precision/recall evaluation command.
+- A contribution sanitizer that replaces source values with controlled placeholders and never uploads data.
+- Privacy, architecture, contribution, security, support, and roadmap documentation.
+- A DocC catalog for integrating the core as a review-first interpretation layer.
+- Review-first CRM integration guidance and private, transient real-image validation that never places images or PII in the public repository.
 - Local image-enhancement pipeline in the Apple Vision adapter: configurable upscaling to a
   minimum long edge, grayscale conversion, contrast adjustment, and unsharp-mask sharpening
   (`AppleVisionPreprocessingConfiguration`, `--no-preprocess`).
@@ -56,8 +101,7 @@ The project follows [Semantic Versioning](https://semver.org/). Before `1.0.0`, 
   finds nothing, still gated by contact-text evidence.
 - Enforced minimum output resolution for perspective-corrected cards before OCR.
 - Pinned `VNRecognizeTextRequest` revision for cross-OS recognition stability.
-- Async scanning APIs (`scanAsync(imageData:)`, `scanAsync(cgImage:)`) that run the local pipeline
-  off the calling actor.
+- Synchronous and async image scanning plus reusable `scanTokens` APIs for non-card documents.
 - End-to-end synthetic-image tests that render card fronts with Core Text and assert classified
   fields through the complete scan pipeline.
 
@@ -68,39 +112,14 @@ The project follows [Semantic Versioning](https://semver.org/). Before `1.0.0`, 
 
 ### Fixed
 
-- Card-back OCR now excludes tokens substantially overlapping a barcode detected on the exact
-  recognition image. Perspective-isolated cards use a second content-free barcode-region request on
-  the rectified image, preventing QR modules from becoming false names or organizations while
-  preserving nearby text and public metadata contracts.
-- Email extraction now repairs OCR-introduced whitespace immediately around `@` while preserving
-  the original reading and preventing the domain portion from also becoming a website.
-- All Sources, Tests, and Package.swift files conform to strict `swift format lint` again after
-  the OCR pipeline changes; formatting-only changes with no behavioral diff.
+- All Sources, Tests, and Package.swift files conform to strict `swift format lint` after the OCR
+  pipeline changes; formatting-only changes have no behavioral effect.
 
 ### Tests
 
 - Added a regression test pinning `recognitionRevision` clamping to `1...3`.
-- New synthetic-fixture tests use fictional domains only (`example.com`, `example.net`,
+- Synthetic-fixture tests use fictional domains only (`example.com`, `example.net`,
   `example.org`); no real provider domains appear in test data.
 
-### Added (earlier)
-
-- A provider-neutral `CardFieldCore` library for deterministic OCR-to-field interpretation.
-- Confidence, evidence, alternative candidates, source-token provenance, and unresolved-line reporting.
-- Additive locale and industry rule packs plus host-owned personal correction stores.
-- An optional Apple Vision adapter that remains separate from the core.
-- Automatic foreground-card detection, bounded candidate ranking, perspective correction, and conservative full-image fallback in the Apple Vision adapter.
-- `card-field-scan`, a local Apple-platform image-to-structured-JSON command with opt-in raw OCR tokens.
-- Card-region selection metadata for isolated, fallback, and explicitly disabled scanning modes.
-- Base rules `base-1.1.0` with conservative inline identity splitting, multilingual name variants,
-  expanded title and department vocabulary, wrapped international addresses, and mixed
-  email/website-line handling.
-- `identityConflict` and `reviewRecommended` warnings for close competing person or organization
-  candidates.
-- Language-neutral JSON schemas, synthetic fixtures, and a precision/recall evaluation command.
-- A contribution sanitizer that replaces source values with controlled placeholders and never uploads data.
-- Privacy, architecture, contribution, security, support, and roadmap documentation.
-- A DocC catalog for integrating the core as a review-first interpretation layer.
-- Review-first CRM integration guidance and private, transient real-image validation that never places images or PII in the public repository.
-
-No release tags have been published yet.
+[Unreleased]: https://github.com/megabrain11/BusinessCardFieldKit/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/megabrain11/BusinessCardFieldKit/tree/v0.1.0

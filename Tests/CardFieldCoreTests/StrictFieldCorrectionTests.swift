@@ -55,7 +55,7 @@ func strictFieldCorrectionDisabledParity() throws {
 func strictEmailAlternativeRecovery() throws {
   let result = try strictClassifier().classify([
     strictToken(
-      "Email: avery@harbor.con",
+      "Email: avery@harbor.c0m",
       id: "email",
       y: 0.5,
       alternatives: ["Email: avery@harbor.example"]

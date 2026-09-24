@@ -19,3 +19,8 @@ Describe the classification, contract, documentation, or tooling change.
 - [ ] `Scripts/check-repository.sh`
 - [ ] Positive synthetic regression
 - [ ] False-promotion regression where applicable
+
+## Human review
+
+- [ ] I reviewed the complete diff and generated artifacts, including any AI-assisted changes.
+- [ ] Architecture, privacy-sensitive behavior, experimental defaults, and release impact have explicit maintainer approval where applicable.

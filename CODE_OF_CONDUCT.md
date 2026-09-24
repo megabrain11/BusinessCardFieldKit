@@ -14,7 +14,7 @@ Positive behavior includes empathy, respect, constructive feedback, accountabili
 
 Project maintainers are responsible for clarifying and enforcing acceptable behavior. They may remove, edit, or reject contributions and may temporarily or permanently ban contributors for behavior they consider inappropriate, threatening, offensive, or harmful.
 
-Report conduct concerns privately to the repository owner. All reports will be reviewed promptly and fairly, and the privacy and safety of the reporter will be respected.
+Report conduct concerns privately through [GitHub private reporting](https://github.com/megabrain11/BusinessCardFieldKit/security/advisories/new) and begin the report title with `Code of Conduct`. This shared private channel is used until a dedicated conduct address is published. All reports will be reviewed promptly and fairly, and the privacy and safety of the reporter will be respected.
 
 ## Attribution
 

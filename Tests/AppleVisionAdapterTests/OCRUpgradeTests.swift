@@ -20,7 +20,8 @@ import Testing
         text: "Alex K1m", boundingBox: CGRect(x: 0.1, y: 0.8, width: 0.3, height: 0.06),
         confidence: 0.9),
       RecognizedLine(
-        text: "alex.kim@exampl3.net", boundingBox: CGRect(x: 0.1, y: 0.3, width: 0.5, height: 0.05),
+        text: "alex.kim@exampl3.example",
+        boundingBox: CGRect(x: 0.1, y: 0.3, width: 0.5, height: 0.05),
         confidence: 0.85),
     ]
     let uncorrected = [
@@ -40,7 +41,7 @@ import Testing
     #expect(abs(merged[0].confidence - 0.9) < 0.000_001)
     #expect(merged[1].text == "alex.kim@example.net")
     #expect(merged[0].alternatives.contains("Alex Kim"))
-    #expect(merged[1].alternatives.contains("alex.kim@exampl3.net"))
+    #expect(merged[1].alternatives.contains("alex.kim@exampl3.example"))
   }
 
   @Test("Unpaired lines from both passes survive merging in stable order")
@@ -75,16 +76,16 @@ import Testing
   @Test("Multi-candidate readings populate token alternatives without duplicates")
   func candidateCollection() {
     let line = RecognizedLine(
-      text: "alex@examp1e.net",
+      text: "alex@examp1e.example",
       boundingBox: CGRect(x: 0.1, y: 0.3, width: 0.5, height: 0.05),
       confidence: 0.8,
-      alternatives: ["alex@examp1e.net", "alex@example.net", "alex@example.org"]
+      alternatives: ["alex@examp1e.example", "alex@example.net", "alex@example.org"]
     )
 
     let tokens = AppleVisionAdapter.tokens(from: [line], language: "en")
 
     #expect(tokens.count == 1)
-    #expect(tokens[0].text == "alex@examp1e.net")
+    #expect(tokens[0].text == "alex@examp1e.example")
     #expect(tokens[0].alternatives == ["alex@example.net", "alex@example.org"])
     #expect(tokens[0].language == "en")
 

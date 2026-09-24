@@ -1,34 +1,78 @@
 # BusinessCardFieldKit
 
-BusinessCardFieldKit is a privacy-first, explainable engine for normalizing business-card OCR and classifying text into structured fields. It is not a contact database, identity service, CRM, image store, or relationship product.
+[![CI](https://github.com/megabrain11/BusinessCardFieldKit/actions/workflows/ci.yml/badge.svg)](https://github.com/megabrain11/BusinessCardFieldKit/actions/workflows/ci.yml)
+[![Swift 6.0](https://img.shields.io/badge/Swift-6.0-F05138?logo=swift&logoColor=white)](Package.swift)
+[![Platforms](https://img.shields.io/badge/platforms-macOS%2013%2B%20%7C%20iOS%2017%2B-lightgrey)](Package.swift)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-Phase 1 is a pure Swift Package. `CardFieldCore` has no dependency on UIKit, SwiftUI, Vision, image types, file storage, or networking. Hosts may supply provider-neutral OCR observations directly. On Apple platforms, the optional `AppleVisionAdapter` can isolate and perspective-correct one likely foreground card, recognize it locally, and pass provider-neutral observations to the core. It conservatively falls back to full-image OCR when isolation is not reliable. Hosts still decide how to capture images, review suggestions, persist approved values, and handle an optional back image.
+BusinessCardFieldKit is a privacy-first Swift package for turning business-card images or
+provider-neutral OCR tokens into structured, reviewable field suggestions. It exists to provide
+the explainable interpretation layer between OCR and an application's contact-review workflow.
 
-## Highlights
+On Apple platforms, the optional `AppleVisionAdapter` runs the image pipeline locally with Apple
+Vision. The provider-neutral `CardFieldCore` has no image, Vision, storage, telemetry, or networking
+dependency. It applies deterministic rules and returns confidence, evidence, alternatives, source
+token identifiers, warnings, and unresolved lines instead of silently treating suggestions as
+facts.
 
-- Deterministic classification with confidence, alternatives, evidence, and source token identifiers
-- Optional fail-closed alternative selection for syntax-valid email, explicit URL, and phone readings
-- Conservative multilingual name handling for Korean, Latin, CJK, and mixed layouts
-- Typed phone numbers, email addresses, websites, profiles, social handles, organizations, titles, departments, and addresses
-- Three explicit rule layers: base rules, locale or industry packs, then local personal corrections
-- Local-only correction-store protocol with memory and JSON implementations
-- Sanitized structural contribution drafts with no automatic upload
-- Language-neutral JSON contracts and rule-pack schemas
-- Synthetic evaluation fixtures and a field-level precision/recall CLI
-- An optional local Apple Vision scanner with foreground-card isolation, saliency fallback, perspective correction at enforced output resolution, image enhancement (upscale, grayscale, contrast, sharpening), dual-pass recognition that shields emails and phones from language correction, multi-candidate readings, targeted low-confidence re-recognition, script-based token languages, a pinned Vision revision, async APIs, and conservative full-image fallback
-- Optional card-back QR/barcode scanning with vCard 3.0/4.0 parsing, same-coordinate QR OCR masking after perspective isolation, deterministic front/back suggestion merging, and default-off content-free stage diagnostics; exact projective masking and one-request empty-result barcode recovery are available as separate fail-closed experiments; decoded payloads are returned only as structured fields and are never logged or persisted
+Key properties:
 
-## Coordinate contract
+- **Local by design:** OCR and barcode recognition use on-device Apple frameworks; the package
+  contains no networking or telemetry path.
+- **Deterministic and explainable:** identical tokens, package version, and rule packs produce the
+  same classified result, with evidence and source provenance attached.
+- **Human-review first:** weak or conflicting evidence remains unresolved or carries an explicit
+  review warning. The package never writes contacts or auto-merges identities.
+- **Multilingual:** conservative script inference and name handling cover Korean, Latin, CJK, and
+  mixed layouts without requiring a cloud service.
+- **Composable:** callers can use the complete Apple Vision pipeline or provide `OCRToken` values
+  from another OCR provider.
 
-Every bounding box uses a normalized unit square on the upright front of the card:
+BusinessCardFieldKit is not a contact database, identity service, CRM, camera layer, or image
+store. Hosts remain responsible for capture, consent, review, persistence, and deletion.
 
-- Origin: bottom-left
-- `x`: increases to the right
-- `y`: increases upward
-- `width` and `height`: fractions of the card dimensions
-- Every component must be between `0` and `1`, and the rectangle must fit inside the unit square
+## Installation
 
-This matches Apple Vision's normalized orientation. Adapters for top-left systems must convert `y` with `1 - top - height`.
+Add the package in Xcode with **File > Add Package Dependencies**, using:
+
+```text
+https://github.com/megabrain11/BusinessCardFieldKit.git
+```
+
+Or add it to `Package.swift`:
+
+```swift
+// swift-tools-version: 6.0
+import PackageDescription
+
+let package = Package(
+  name: "YourApp",
+  platforms: [
+    .macOS(.v13),
+    .iOS(.v17)
+  ],
+  dependencies: [
+    .package(
+      url: "https://github.com/megabrain11/BusinessCardFieldKit.git",
+      from: "0.1.0"
+    )
+  ],
+  targets: [
+    .target(
+      name: "YourApp",
+      dependencies: [
+        .product(name: "CardFieldCore", package: "BusinessCardFieldKit"),
+        .product(name: "AppleVisionAdapter", package: "BusinessCardFieldKit")
+      ]
+    )
+  ]
+)
+```
+
+Depend on `CardFieldCore` alone when the host already has OCR observations. Add
+`AppleVisionAdapter` for local image recognition on supported Apple platforms. The consuming target
+must support macOS 13 or later or iOS 17 or later. Because the package is pre-`1.0`, pin an exact
+version or commit when an integration requires a controlled upgrade window.
 
 ## Quick start
 
@@ -36,16 +80,26 @@ This matches Apple Vision's normalized orientation. Adapters for top-left system
 import CardFieldCore
 
 let observations = [
-    OCRToken(
-        text: "Alex Kim",
-        boundingBox: .init(x: 0.10, y: 0.75, width: 0.35, height: 0.08),
-        confidence: 0.97,
-        language: "en"
-    )
+  OCRToken(
+    id: "name",
+    text: "Avery Quinn",
+    boundingBox: .init(x: 0.10, y: 0.75, width: 0.35, height: 0.08),
+    confidence: 0.97,
+    language: "en"
+  ),
+  OCRToken(
+    id: "email",
+    text: "avery.quinn@example.com",
+    boundingBox: .init(x: 0.10, y: 0.25, width: 0.55, height: 0.05),
+    confidence: 0.99,
+    language: "en"
+  )
 ]
 
 let result = try CardFieldClassifier().classify(observations)
 print(result.fullName?.normalizedValue ?? "Unresolved")
+print(result.emailAddresses.map(\.normalizedValue))
+print(result.warnings)
 ```
 
 The engine returns suggestions, never confirmed facts. A host should require review before saving or acting on a result.
@@ -57,16 +111,17 @@ import AppleVisionAdapter
 import Foundation
 
 func scanCardFront(_ frontImageData: Data) throws {
-    let scanner = AppleVisionScanner(
-        configuration: .init(
-            recognitionLanguages: ["ko-KR", "en-US"],
-            automaticallyDetectsLanguage: true
-        )
+  let scanner = AppleVisionScanner(
+    configuration: .init(
+      recognitionLanguages: ["ko-KR", "en-US"],
+      automaticallyDetectsLanguage: true
     )
-    let scan = try scanner.scan(imageData: frontImageData)
+  )
+  let scan = try scanner.scan(imageData: frontImageData)
 
-    print(scan.fields.fullName?.normalizedValue ?? "Unresolved")
-    print(scan.fields.emailAddresses.map(\.normalizedValue))
+  print(scan.fields.fullName?.normalizedValue ?? "Unresolved")
+  print(scan.fields.emailAddresses.map(\.normalizedValue))
+  print(scan.fields.warnings)
 }
 ```
 
@@ -82,6 +137,19 @@ The command writes reviewable structured JSON to standard output and omits raw O
 
 For a complete integration walkthrough, see the [CardFieldCore DocC catalog](Sources/CardFieldCore/CardFieldCore.docc/CardFieldCore.md).
 
+## Coordinate contract
+
+Every bounding box uses a normalized unit square on the upright card:
+
+- Origin: bottom-left
+- `x`: increases to the right
+- `y`: increases upward
+- `width` and `height`: fractions of the card dimensions
+- Every component must be between `0` and `1`, and the rectangle must fit inside the unit square
+
+This matches Apple Vision's normalized orientation. Adapters for top-left systems must convert `y`
+with `1 - top - height`.
+
 ## Package products
 
 - `CardFieldCore`: contracts, normalization, rules, classification, confidence, evidence, corrections, sanitization, layout grouping, and script-based language inference
@@ -94,16 +162,16 @@ For a complete integration walkthrough, see the [CardFieldCore DocC catalog](Sou
 - `card-field-private-benchmark`: environment-gated real-photo holdout runner that emits aggregate-only paired evidence
 - `card-field-private-back-benchmark`: environment-gated card-back runner that emits aggregate-only barcode, merge, review, and latency evidence
 
-Run the package and evaluation suite:
+CI and local release validation use one entry point:
 
 ```sh
-swift test
-swift run card-field-eval Fixtures/Synthetic/phase1.json
-swift run card-field-scan --help
-swift run card-field-benchmark --help
-swift run card-field-private-benchmark --help
-swift run card-field-private-back-benchmark --help
+Scripts/check-repository.sh
 ```
+
+It runs strict `swift format` linting, a package build, all tests without parallel execution, both
+synthetic field-evaluation corpora, CLI smoke tests, aggregate synthetic OCR/card-back benchmarks,
+DocC conversion with warnings as errors, JSON syntax checks, and the repository credential scan.
+See [Contributing](CONTRIBUTING.md) for prerequisites and focused commands.
 
 Use `card-field-benchmark --targeted-evidence` with the separately versioned targeted stress manifest to compare targeted re-recognition enabled and disabled without changing scanner defaults. Reports remain aggregate-only and contain no OCR payloads or case identifiers.
 
@@ -156,6 +224,12 @@ Rule packs are additive JSON vocabularies. Personal corrections remain local by 
 
 Google ML Kit, Tesseract, cloud OCR, and browser OCR can implement the same adapter contract by emitting text, a bottom-left normalized bounding box, confidence, and an optional language tag. The core never imports provider types. See [adapter guidance](Docs/OCR_ADAPTERS.md).
 
+## Reuse beyond business cards
+
+AnswerSheetFieldKit reuses BusinessCardFieldKit's provider-neutral `OCRToken` and token-scanning
+layer while keeping answer-sheet interpretation in its own project. This is a concrete example of
+the package boundary being reusable infrastructure, not a claim of broad adoption.
+
 ## Scope and privacy
 
 Only local OCR/barcode adapters, provider-neutral parsing, same-card front/back suggestion combination, OCR normalization, and field classification belong here. Relationship notes, meeting memories, relationship graphs, recommendations, cross-contact identity resolution, shared contact databases, server deduplication, private user data, production datasets, image storage, camera capture, and contact writes are out of scope.
@@ -173,6 +247,7 @@ A CRM such as Relationship Memory can reuse the public interpretation contracts,
 - [AI collaboration handoff](Docs/AI_COLLABORATION.md)
 - [Roadmap](ROADMAP.md)
 - [Changelog](CHANGELOG.md)
+- [Proposed v0.2.0 release notes](Docs/RELEASE_NOTES_0.2.0.md)
 - [Support policy](SUPPORT.md)
 - [Contributing](CONTRIBUTING.md)
 - [Security policy](SECURITY.md)

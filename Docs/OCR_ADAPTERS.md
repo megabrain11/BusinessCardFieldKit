@@ -103,4 +103,7 @@ Convert the selected page or image bounding boxes to the same unit square. Tesse
 
 Map the provider response locally when possible. If OCR itself requires upload, the host—not this package—must provide consent, retention, access, deletion, and processor disclosures. Never imply that a cloud OCR adapter is local.
 
-Adapters must analyze only the card front. Back-image behavior and the decision to retain or discard source images belong to the host application.
+General OCR adapters should emit provider-neutral observations without taking ownership of image
+storage. The separate `CardBackScanner` can interpret an explicitly supplied back image locally;
+the host still owns capture, front/back association, review, and the decision to retain or discard
+source images.

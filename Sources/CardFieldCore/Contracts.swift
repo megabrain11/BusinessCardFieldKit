@@ -57,7 +57,7 @@ public struct OCRToken: Codable, Equatable, Sendable, Identifiable {
 
   public init(from decoder: any Decoder) throws {
     let container = try decoder.container(keyedBy: CodingKeys.self)
-    id = try container.decode(String.self, forKey: .id)
+    id = try container.decodeIfPresent(String.self, forKey: .id) ?? ""
     text = try container.decode(String.self, forKey: .text)
     boundingBox = try container.decode(NormalizedBoundingBox.self, forKey: .boundingBox)
     confidence = try container.decode(Double.self, forKey: .confidence)
