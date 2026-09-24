@@ -40,6 +40,7 @@ swift run card-field-private-back-benchmark --help          # private card-back 
 - Swift tools 6.0 (strict concurrency ON), platforms macOS 13+ / iOS 17+.
 - Tests run on macOS only for adapter targets; core tests are cross-platform.
 - Vision-dependent E2E tests render synthetic cards with Core Text — keep fixtures fictional and deterministic.
+- Vision-calibrated suites (golden scenes plus targeted, card-back, and barcode evidence) expect the macOS 26 Vision runtime. CI runs on the `macos-26` runner with Xcode 26.6; on macOS 15, five degraded golden scenes read phone numbers differently.
 
 ## Architecture map
 

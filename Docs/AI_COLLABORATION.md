@@ -24,6 +24,11 @@ Goal: publish the verified release candidate as `v0.2.0` with records that match
    checker could not finish a five-way array concatenation in `CardBackBenchmarkTests`; the local
    Swift 6.3.3 compiler accepted it. The expression is now built step by step with the same order
    and values. A clean local build found no expression slower than 50 ms to type-check.
+5. **CI runtime**: the first complete test run on the `macos-15` runner failed five
+   Vision-calibrated tests. Five golden scenes read phone numbers differently, the conditional
+   dual-pass gate never skipped, and barcode-recovery evidence differed. With owner approval, CI now
+   runs on `macos-26` with Xcode 26.6, the same OS build (26.6.2, 25G83) used for calibration. CI
+   no longer compiles with Swift 6.0, the declared minimum; the old job is what found item 4.
 
 ### Verification
 
@@ -35,7 +40,8 @@ results are recorded on the pull request.
 ### Next steps
 
 - Publish the GitHub Release from the prepared notes.
-- Start `0.3.0` with the measured CRM adoption items in the roadmap.
+- Start `0.3.0` with the measured CRM adoption items in the roadmap, including earlier-OS Vision
+  validation and a build-only Swift 6.0 CI job.
 - `codex/private-barcode-recovery-validation` remains a local-only detailed history; decide
   whether to keep, push, or retire it now that the squashed release is on `main`.
 

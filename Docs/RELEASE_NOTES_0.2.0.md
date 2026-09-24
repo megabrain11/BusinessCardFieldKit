@@ -38,14 +38,16 @@ aggregate-only evidence.
 The release tree passed the `Scripts/check-repository.sh` steps on 2026-09-25 with Swift 6.3.3 and
 Xcode 26.6 on macOS: 202 tests, both synthetic field-evaluation corpora, CLI smoke tests,
 deterministic OCR/card-back benchmark paths, strict formatting, DocC warnings-as-errors, JSON syntax
-validation, and the credential scan. GitHub Actions runs the same script on every pull request and
-on `main`.
+validation, and the credential scan. GitHub Actions runs the same script on the `macos-26` runner
+for every pull request and on `main`.
 
 ## Known limitations
 
 - This remains pre-`1.0` software. Public Swift APIs, schemas, and rule behavior may change in a
   minor release with changelog and migration notes.
 - Apple Vision output can vary by OS, hardware, print quality, lighting, crop, and orientation.
+  Golden-scene and barcode-evidence expectations are calibrated on macOS 26 Vision; on macOS 15
+  Vision, phone numbers differed in five of the fifty golden scenes, all degraded variants.
 - Automatic isolation selects one likely card; it does not enumerate multiple cards in a scene.
 - Multilingual coverage and fictional evaluation breadth are intentionally incomplete.
 - Experimental conditional dual-pass, projective barcode masking, and empty-result barcode

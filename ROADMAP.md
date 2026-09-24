@@ -43,6 +43,8 @@ above instead:
 - Make result and rule-pack migrations explicit and testable.
 - Keep conditional dual-pass, projective barcode masking, and source barcode recovery opt-in until
   representative private physical-device evidence receives human approval.
+- Validate Vision-calibrated suites on earlier supported OS generations, where degraded scenes
+  currently read phone numbers differently, and restore Swift 6.0 minimum-toolchain CI coverage.
 
 For Relationship Memory, adoption should progress from shadow output, to reviewer-visible suggestions, to selected default fields only after field-specific thresholds are met. The host should pin a package version and retain a rollback path.
 
