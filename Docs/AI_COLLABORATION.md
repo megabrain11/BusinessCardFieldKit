@@ -2,6 +2,42 @@
 
 Living document for humans and AI agents (Codex, Claude Code, others). Update the relevant section when you finish significant work. Newest entries at the top.
 
+## Session 2026-09-24 — Release-candidate reconciliation (completed)
+
+Goal: reconcile repository state after alternating Codex and Claude Code sessions, then carry the
+uncommitted `v0.2.0` preparation onto the release candidate without publishing anything.
+
+### What changed
+
+1. **Branches reconciled**: `codex/private-barcode-recovery-validation` (40 detailed commits from
+   2026-08-27 to 2026-08-31) and `codex/business-card-release-candidate` (the same tree squashed
+   into six commits on `main`) were confirmed tree-identical. The 2026-09-22 preparation, which was
+   uncommitted on the detailed branch, is now one commit on the release candidate. Metadata for
+   three worktrees whose temporary directories no longer exist was pruned; no branch was removed.
+2. **Release claims checked**: changelog dates, `0.1.0` contents, toolchain versions, the CI badge,
+   and release-note statements match the `v0.1.0` tag tree and the local toolchain. The `OCRToken`
+   decoder, schema, and public initializer now agree that identifiers are optional. Added content
+   contains no real names, emails, or phone numbers.
+3. **Records corrected**: a Claude Code session on 2026-08-29 reviewed and edited the quarantined
+   `<repository-backups>/AppleVisionAdapter 2.swift` instead of this package, and wrote the backlog
+   prompts audited in the 2026-08-29 card-back entry. None of those edits reached this repository.
+   The backup was restored byte-for-byte to the SHA-256 recorded in the 2026-08-23 entry.
+
+### Verification
+
+Every `Scripts/check-repository.sh` step ran individually because this machine has no standalone
+`rg` binary; the credential scan used the recorded `grep` equivalent. Strict format lint, build,
+201 tests, both synthetic evaluators, CLI and benchmark smoke runs, DocC warnings-as-errors, JSON
+syntax, the credential scan, and `git diff --check` passed.
+
+### Next steps (human approval required)
+
+1. Neither `codex/*` branch above existed on `origin` before this session. Push the release
+   candidate, merge it to `main`, rerun CI on the merge commit, then tag and publish `v0.2.0` from
+   `Docs/RELEASE_NOTES_0.2.0.md`.
+2. Keep `codex/private-barcode-recovery-validation` as the detailed history until the release is
+   published.
+
 ## Session 2026-09-22 — Open-source adoption and v0.2.0 release preparation (completed)
 
 Goal: prepare the existing architecture and functionality for external Swift Package adoption and
