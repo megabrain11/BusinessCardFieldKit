@@ -23,7 +23,7 @@ public struct NormalizedBoundingBox: Codable, Equatable, Sendable {
   }
 }
 
-/// One OCR observation from the front of a card. The core never accepts card images.
+/// One OCR observation from a card image. The core never accepts card images.
 ///
 /// `alternatives` carries lower-ranked provider readings for the same region. It is
 /// additive metadata: classification only consumes `text`.
@@ -57,7 +57,7 @@ public struct OCRToken: Codable, Equatable, Sendable, Identifiable {
 
   public init(from decoder: any Decoder) throws {
     let container = try decoder.container(keyedBy: CodingKeys.self)
-    id = try container.decode(String.self, forKey: .id)
+    id = try container.decodeIfPresent(String.self, forKey: .id) ?? ""
     text = try container.decode(String.self, forKey: .text)
     boundingBox = try container.decode(NormalizedBoundingBox.self, forKey: .boundingBox)
     confidence = try container.decode(Double.self, forKey: .confidence)

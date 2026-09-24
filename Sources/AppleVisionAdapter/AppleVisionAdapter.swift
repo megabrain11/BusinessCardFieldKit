@@ -157,6 +157,9 @@ import Foundation
     /// correction — and merged deterministically. Doubles recognition latency.
     public var dualPassRecognition: Bool
 
+    /// Default-off, fail-closed experiment that may skip a configured second pass.
+    public var conditionalDualPass: AppleVisionConditionalDualPassOptions
+
     /// Whether low-confidence lines are re-recognized from an upscaled crop.
     public var performsTargetedReRecognition: Bool
 
@@ -167,6 +170,17 @@ import Foundation
     /// Whether tokens without an explicit hint receive script-based BCP 47 tags
     /// inferred from Unicode ranges.
     public var infersTokenLanguages: Bool
+
+    /// Opt-in privacy-safe stage timing and Vision request diagnostics.
+    /// Disabled by default and never includes OCR or image content.
+    public var diagnostics: AppleVisionDiagnosticsOptions
+
+    /// Card-back barcode masking strategy. The rectified redetection path is the stable default;
+    /// source-observation projective mapping is an opt-in experiment with fail-closed fallback.
+    public var barcodeMaskingStrategy: AppleVisionBarcodeMaskingStrategy
+
+    /// Default-off, single-retry recovery for an empty source barcode result.
+    public var barcodeDetectionRecovery: AppleVisionBarcodeDetectionRecoveryOptions
 
     public init(
       recognitionLevel: RecognitionLevel = .accurate,
@@ -181,9 +195,15 @@ import Foundation
       recognitionRevision: Int = 3,
       candidateCount: Int = 3,
       dualPassRecognition: Bool = true,
+      conditionalDualPass: AppleVisionConditionalDualPassOptions =
+        AppleVisionConditionalDualPassOptions(),
       performsTargetedReRecognition: Bool = true,
       targetedReRecognitionConfidenceLimit: Double = 0.35,
-      infersTokenLanguages: Bool = true
+      infersTokenLanguages: Bool = true,
+      diagnostics: AppleVisionDiagnosticsOptions = .disabled,
+      barcodeMaskingStrategy: AppleVisionBarcodeMaskingStrategy = .rectifiedRedetection,
+      barcodeDetectionRecovery: AppleVisionBarcodeDetectionRecoveryOptions =
+        AppleVisionBarcodeDetectionRecoveryOptions()
     ) {
       self.recognitionLevel = recognitionLevel
       self.recognitionLanguages = recognitionLanguages
@@ -196,10 +216,14 @@ import Foundation
       self.recognitionRevision = min(max(recognitionRevision, 1), 3)
       self.candidateCount = min(max(candidateCount, 1), 10)
       self.dualPassRecognition = dualPassRecognition
+      self.conditionalDualPass = conditionalDualPass
       self.performsTargetedReRecognition = performsTargetedReRecognition
       self.targetedReRecognitionConfidenceLimit = min(
         max(targetedReRecognitionConfidenceLimit, 0), 1)
       self.infersTokenLanguages = infersTokenLanguages
+      self.diagnostics = diagnostics
+      self.barcodeMaskingStrategy = barcodeMaskingStrategy
+      self.barcodeDetectionRecovery = barcodeDetectionRecovery
     }
   }
 
@@ -237,15 +261,19 @@ import Foundation
     public var tokens: [OCRToken]
     public var fields: CardFieldResult
     public var cardRegionSelection: AppleVisionCardRegionSelection
+    /// Present only when diagnostics were explicitly enabled for this scan.
+    public var diagnostics: AppleVisionScanDiagnostics?
 
     public init(
       tokens: [OCRToken],
       fields: CardFieldResult,
-      cardRegionSelection: AppleVisionCardRegionSelection = .disabled
+      cardRegionSelection: AppleVisionCardRegionSelection = .disabled,
+      diagnostics: AppleVisionScanDiagnostics? = nil
     ) {
       self.tokens = tokens
       self.fields = fields
       self.cardRegionSelection = cardRegionSelection
+      self.diagnostics = diagnostics
     }
   }
 
@@ -258,13 +286,17 @@ import Foundation
   public struct AppleVisionTokenScanResult: Equatable, Sendable {
     public var tokens: [OCRToken]
     public var cardRegionSelection: AppleVisionCardRegionSelection
+    /// Present only when diagnostics were explicitly enabled for this scan.
+    public var diagnostics: AppleVisionScanDiagnostics?
 
     public init(
       tokens: [OCRToken],
-      cardRegionSelection: AppleVisionCardRegionSelection
+      cardRegionSelection: AppleVisionCardRegionSelection,
+      diagnostics: AppleVisionScanDiagnostics? = nil
     ) {
       self.tokens = tokens
       self.cardRegionSelection = cardRegionSelection
+      self.diagnostics = diagnostics
     }
   }
 
@@ -322,8 +354,15 @@ import Foundation
       imageData: Data,
       orientation: CGImagePropertyOrientation? = nil
     ) throws -> AppleVisionScanResult {
-      let decoded = try Self.decodedImage(imageData)
-      return try scanImage(decoded.image, orientation: orientation ?? decoded.exifOrientation)
+      let diagnostics = makeInstrumentation()
+      let decoded = try measure(.imageDecoding, diagnostics: diagnostics) {
+        try Self.decodedImage(imageData)
+      }
+      return try scanImage(
+        decoded.image,
+        orientation: orientation ?? decoded.exifOrientation,
+        diagnostics: diagnostics
+      )
     }
 
     /// Scans a decoded image. `orientation` describes how its pixels must rotate to become upright.
@@ -331,7 +370,11 @@ import Foundation
       cgImage: CGImage,
       orientation: CGImagePropertyOrientation = .up
     ) throws -> AppleVisionScanResult {
-      try scanImage(cgImage, orientation: orientation)
+      try scanImage(
+        cgImage,
+        orientation: orientation,
+        diagnostics: makeInstrumentation()
+      )
     }
 
     /// Recognizes encoded image bytes as provider-neutral tokens without field classification.
@@ -344,10 +387,19 @@ import Foundation
       imageData: Data,
       orientation: CGImagePropertyOrientation? = nil
     ) throws -> AppleVisionTokenScanResult {
-      let decoded = try Self.decodedImage(imageData)
-      return try performTokenRecognition(
+      let diagnostics = makeInstrumentation()
+      let decoded = try measure(.imageDecoding, diagnostics: diagnostics) {
+        try Self.decodedImage(imageData)
+      }
+      let recognized = try performTokenRecognition(
         decoded.image,
-        orientation: orientation ?? decoded.exifOrientation
+        orientation: orientation ?? decoded.exifOrientation,
+        diagnostics: diagnostics
+      )
+      return AppleVisionTokenScanResult(
+        tokens: recognized.tokens,
+        cardRegionSelection: recognized.cardRegionSelection,
+        diagnostics: diagnostics?.snapshot(configuration: configuration)
       )
     }
 
@@ -356,7 +408,48 @@ import Foundation
       cgImage: CGImage,
       orientation: CGImagePropertyOrientation = .up
     ) throws -> AppleVisionTokenScanResult {
-      try performTokenRecognition(cgImage, orientation: orientation)
+      try scanTokensWithRecognitionImage(
+        cgImage: cgImage,
+        orientation: orientation
+      ).result
+    }
+
+    /// Package-internal token scan that also exposes the exact upright image whose
+    /// normalized coordinates the returned tokens use. The image is not retained
+    /// or added to the public result contract.
+    func scanTokensWithRecognitionImage(
+      cgImage: CGImage,
+      orientation: CGImagePropertyOrientation = .up
+    ) throws -> TokenScanWithRecognitionImage {
+      let diagnostics = makeInstrumentation()
+      let recognized = try performTokenRecognition(
+        cgImage,
+        orientation: orientation,
+        diagnostics: diagnostics
+      )
+      return TokenScanWithRecognitionImage(
+        result: AppleVisionTokenScanResult(
+          tokens: recognized.tokens,
+          cardRegionSelection: recognized.cardRegionSelection,
+          diagnostics: diagnostics?.snapshot(configuration: configuration)
+        ),
+        recognitionImage: recognized.recognitionImage,
+        cardRegionQuadrilateral: recognized.cardRegionQuadrilateral
+      )
+    }
+
+    private func makeInstrumentation() -> ScanInstrumentation? {
+      guard configuration.diagnostics.isEnabled else { return nil }
+      return ScanInstrumentation(clock: configuration.diagnostics.clock)
+    }
+
+    private func measure<T>(
+      _ stage: AppleVisionScanStage,
+      diagnostics: ScanInstrumentation?,
+      operation: () throws -> T
+    ) rethrows -> T {
+      guard let diagnostics else { return try operation() }
+      return try diagnostics.measure(stage, operation)
     }
 
     private static func decodedImage(_ data: Data) throws -> (
@@ -375,12 +468,18 @@ import Foundation
 
     private func scanImage(
       _ image: CGImage,
-      orientation: CGImagePropertyOrientation
+      orientation: CGImagePropertyOrientation,
+      diagnostics: ScanInstrumentation?
     ) throws -> AppleVisionScanResult {
-      let tokens = try performTokenRecognition(image, orientation: orientation)
+      let tokens = try performTokenRecognition(
+        image,
+        orientation: orientation,
+        diagnostics: diagnostics
+      )
       return try makeResult(
         from: tokens.tokens,
-        cardRegionSelection: tokens.cardRegionSelection
+        cardRegionSelection: tokens.cardRegionSelection,
+        diagnostics: diagnostics
       )
     }
 
@@ -388,29 +487,57 @@ import Foundation
     /// handling, recognition, merging, refinement, and language tags.
     private func performTokenRecognition(
       _ image: CGImage,
-      orientation: CGImagePropertyOrientation
-    ) throws -> AppleVisionTokenScanResult {
-      let working = preparedWorkingImage(image, orientation: orientation)
+      orientation: CGImagePropertyOrientation,
+      diagnostics: ScanInstrumentation?
+    ) throws -> TokenRecognitionPayload {
+      let working = measure(.preprocessing, diagnostics: diagnostics) {
+        preparedWorkingImage(image, orientation: orientation)
+      }
 
       var tokens: [OCRToken]
       var selection: AppleVisionCardRegionSelection
+      var recognitionImage: CGImage
+      var cardRegionQuadrilateral: BarcodeMaskQuadrilateral?
       if configuration.cardRegion.mode == .automatic,
-        let isolatedResult = isolatedCardResult(from: working)
+        let isolatedResult = isolatedCardResult(from: working, diagnostics: diagnostics)
       {
         tokens = isolatedResult.tokens
         selection = .isolated(isolatedResult.region)
+        recognitionImage = isolatedResult.recognitionImage
+        cardRegionQuadrilateral = isolatedResult.quadrilateral
+        diagnostics?.recordCardIsolationSucceeded()
       } else {
-        var recognized = try recognizeTokens(in: working, orientation: .up)
-        recognized = refineLowConfidenceTokens(recognized, in: working)
+        var recognized = try recognizeTokens(
+          in: working,
+          orientation: .up,
+          context: configuration.cardRegion.mode == .automatic
+            ? .fullImageFallback : .cardRegionDisabled,
+          diagnostics: diagnostics
+        )
+        recognized = refineLowConfidenceTokens(
+          recognized,
+          in: working,
+          diagnostics: diagnostics
+        )
         tokens = recognized
+        recognitionImage = working
+        cardRegionQuadrilateral = nil
         selection =
           configuration.cardRegion.mode == .disabled ? .disabled : .fullImageFallback
+        if selection == .fullImageFallback {
+          diagnostics?.recordFullImageFallback()
+        }
       }
 
       guard !tokens.isEmpty else {
         throw AppleVisionScanError.noRecognizedText
       }
-      return AppleVisionTokenScanResult(tokens: tokens, cardRegionSelection: selection)
+      return TokenRecognitionPayload(
+        tokens: tokens,
+        cardRegionSelection: selection,
+        recognitionImage: recognitionImage,
+        cardRegionQuadrilateral: cardRegionQuadrilateral
+      )
     }
 
     /// Produces one upright, enhanced image shared by detection, recognition, and crops.
@@ -434,7 +561,10 @@ import Foundation
 
     private func recognizeLines(
       in image: CGImage,
-      orientation: CGImagePropertyOrientation
+      orientation: CGImagePropertyOrientation,
+      diagnostics: ScanInstrumentation? = nil,
+      requestRole: RecognitionRequestRole = .standard,
+      context: DualPassRecognitionContext = .cardRegionDisabled
     ) throws -> [RecognizedLine] {
       let request = Self.makeRequest(configuration: configuration)
       let handler = VNImageRequestHandler(
@@ -442,8 +572,14 @@ import Foundation
         orientation: orientation,
         options: [:]
       )
+      diagnostics?.recordTextRequest(
+        secondary: false,
+        targeted: requestRole == .targetedReRecognition
+      )
       do {
-        try handler.perform([request])
+        try measure(.primaryRecognition, diagnostics: diagnostics) {
+          try handler.perform([request])
+        }
       } catch {
         throw AppleVisionScanError.recognitionFailed(error.localizedDescription)
       }
@@ -453,8 +589,43 @@ import Foundation
         candidateCount: configuration.candidateCount
       )
       guard configuration.dualPassRecognition, configuration.recognitionLevel == .accurate else {
+        diagnostics?.recordDualPassDecision(.dualPassUnavailable)
         return primaryLines
       }
+      guard configuration.conditionalDualPass.mode == .enabled else {
+        diagnostics?.recordDualPassDecision(.policyDisabled)
+        return try recognizeSecondaryLines(
+          primaryLines,
+          image: image,
+          orientation: orientation,
+          diagnostics: diagnostics,
+          requestRole: requestRole
+        )
+      }
+      let decision = ConditionalDualPassEvaluator.decision(
+        lines: primaryLines,
+        context: context,
+        requestRole: requestRole,
+        options: configuration.conditionalDualPass
+      )
+      diagnostics?.recordDualPassDecision(decision)
+      guard decision != .eligible else { return primaryLines }
+      return try recognizeSecondaryLines(
+        primaryLines,
+        image: image,
+        orientation: orientation,
+        diagnostics: diagnostics,
+        requestRole: requestRole
+      )
+    }
+
+    private func recognizeSecondaryLines(
+      _ primaryLines: [RecognizedLine],
+      image: CGImage,
+      orientation: CGImagePropertyOrientation,
+      diagnostics: ScanInstrumentation?,
+      requestRole: RecognitionRequestRole
+    ) throws -> [RecognizedLine] {
 
       var oppositeConfiguration = configuration
       oppositeConfiguration.usesLanguageCorrection.toggle()
@@ -464,8 +635,14 @@ import Foundation
         orientation: orientation,
         options: [:]
       )
+      diagnostics?.recordTextRequest(
+        secondary: true,
+        targeted: requestRole == .targetedReRecognition
+      )
       do {
-        try oppositeHandler.perform([oppositeRequest])
+        try measure(.secondaryRecognition, diagnostics: diagnostics) {
+          try oppositeHandler.perform([oppositeRequest])
+        }
       } catch {
         return primaryLines
       }
@@ -478,14 +655,25 @@ import Foundation
         configuration.usesLanguageCorrection ? primaryLines : oppositeLines
       let uncorrected =
         configuration.usesLanguageCorrection ? oppositeLines : primaryLines
-      return Self.mergedLines(corrected: corrected, uncorrected: uncorrected)
+      let merged = measure(.dualPassMerge, diagnostics: diagnostics) {
+        Self.mergedLines(corrected: corrected, uncorrected: uncorrected)
+      }
+      diagnostics?.recordDualPassExecuted()
+      return merged
     }
 
     private func recognizeTokens(
       in image: CGImage,
-      orientation: CGImagePropertyOrientation
+      orientation: CGImagePropertyOrientation,
+      context: DualPassRecognitionContext = .cardRegionDisabled,
+      diagnostics: ScanInstrumentation? = nil
     ) throws -> [OCRToken] {
-      let lines = try recognizeLines(in: image, orientation: orientation)
+      let lines = try recognizeLines(
+        in: image,
+        orientation: orientation,
+        diagnostics: diagnostics,
+        context: context
+      )
       return AppleVisionAdapter.tokens(
         from: lines,
         language: configuration.tokenLanguage,
@@ -499,7 +687,8 @@ import Foundation
     /// fail a scan that already produced usable text.
     private func refineLowConfidenceTokens(
       _ tokens: [OCRToken],
-      in working: CGImage
+      in working: CGImage,
+      diagnostics: ScanInstrumentation? = nil
     ) -> [OCRToken] {
       let limit = configuration.targetedReRecognitionConfidenceLimit
       let weakTokens = tokens.filter { $0.confidence <= limit && $0.text.count >= 2 }
@@ -529,41 +718,49 @@ import Foundation
 
       let refinedSource =
         ImagePreprocessor.upscale(cropped, targetLongEdge: 1_600) ?? cropped
-      guard
-        let refinedLines = try? recognizeLines(in: refinedSource, orientation: .up),
-        !refinedLines.isEmpty
-      else { return tokens }
+      return measure(.targetedReRecognition, diagnostics: diagnostics) {
+        guard
+          let refinedLines = try? recognizeLines(
+            in: refinedSource,
+            orientation: .up,
+            diagnostics: diagnostics,
+            requestRole: .targetedReRecognition,
+            context: .isolatedCard
+          ),
+          !refinedLines.isEmpty
+        else { return tokens }
 
-      let imageSize = CGSize(width: working.width, height: working.height)
-      let cropFrame = Self.normalizedFrame(of: cropRect, in: imageSize)
+        let imageSize = CGSize(width: working.width, height: working.height)
+        let cropFrame = Self.normalizedFrame(of: cropRect, in: imageSize)
 
-      var refined = tokens
-      for index in refined.indices where refined[index].confidence <= limit {
-        let token = refined[index]
-        let inflated = Self.inflated(token.boundingBox, fraction: 0.5)
-        var best: RecognizedLine?
-        for line in refinedLines {
-          let absolute = Self.absoluteBox(line.boundingBox, within: cropFrame)
-          let inflatedBox = CGRect(
-            x: inflated.x,
-            y: inflated.y,
-            width: inflated.width,
-            height: inflated.height
-          )
-          guard Self.centersOverlap(absolute, inflatedBox) else { continue }
-          if best == nil || line.confidence > best!.confidence { best = line }
+        var refined = tokens
+        for index in refined.indices where refined[index].confidence <= limit {
+          let token = refined[index]
+          let inflated = Self.inflated(token.boundingBox, fraction: 0.5)
+          var best: RecognizedLine?
+          for line in refinedLines {
+            let absolute = Self.absoluteBox(line.boundingBox, within: cropFrame)
+            let inflatedBox = CGRect(
+              x: inflated.x,
+              y: inflated.y,
+              width: inflated.width,
+              height: inflated.height
+            )
+            guard Self.centersOverlap(absolute, inflatedBox) else { continue }
+            if best == nil || line.confidence > best!.confidence { best = line }
+          }
+          guard let replacement = best, Double(replacement.confidence) > token.confidence
+          else { continue }
+
+          refined[index].text = replacement.text
+          refined[index].confidence = min(max(Double(replacement.confidence), 0), 1)
+          var alternatives = refined[index].alternatives
+          alternatives.append(contentsOf: [token.text] + replacement.alternatives)
+          var seen: Set<String> = [replacement.text]
+          refined[index].alternatives = alternatives.filter { seen.insert($0).inserted }
         }
-        guard let replacement = best, Double(replacement.confidence) > token.confidence
-        else { continue }
-
-        refined[index].text = replacement.text
-        refined[index].confidence = min(max(Double(replacement.confidence), 0), 1)
-        var alternatives = refined[index].alternatives
-        alternatives.append(contentsOf: [token.text] + replacement.alternatives)
-        var seen: Set<String> = [replacement.text]
-        refined[index].alternatives = alternatives.filter { seen.insert($0).inserted }
+        return refined
       }
-      return refined
     }
 
     /// Internal hook exercising targeted refinement without a full scan.
@@ -571,13 +768,20 @@ import Foundation
       refineLowConfidenceTokens(tokens, in: image)
     }
 
-    private func isolatedCardResult(from working: CGImage) -> IsolatedCardRecognition? {
+    private func isolatedCardResult(
+      from working: CGImage,
+      diagnostics: ScanInstrumentation? = nil
+    ) -> IsolatedCardRecognition? {
+      diagnostics?.recordCardIsolationAttempted()
       let ciImage = CIImage(cgImage: working)
       let regionConfiguration = configuration.cardRegion.normalized
       let request = Self.makeRectangleRequest(configuration: regionConfiguration)
       let handler = VNImageRequestHandler(ciImage: ciImage, options: [:])
+      diagnostics?.recordRectangleRequest()
       do {
-        try handler.perform([request])
+        try measure(.cardDetection, diagnostics: diagnostics) {
+          try handler.perform([request])
+        }
       } catch {
         return nil
       }
@@ -589,13 +793,15 @@ import Foundation
         configuration: regionConfiguration,
         limit: regionConfiguration.maximumTextRecognitionCandidates
       )
-      if ranked.isEmpty, regionConfiguration.usesSaliencyFallback,
-        let salient = CardRegionSelector.saliencyCandidate(
-          from: ciImage,
-          configuration: regionConfiguration
-        )
-      {
-        ranked = [salient]
+      if ranked.isEmpty, regionConfiguration.usesSaliencyFallback {
+        diagnostics?.recordSaliencyRequest()
+        let salient = measure(.saliencyFallback, diagnostics: diagnostics) {
+          CardRegionSelector.saliencyCandidate(
+            from: ciImage,
+            configuration: regionConfiguration
+          )
+        }
+        if let salient { ranked = [salient] }
       }
       guard !ranked.isEmpty else { return nil }
 
@@ -609,7 +815,12 @@ import Foundation
             context: context,
             minimumLongEdge: regionConfiguration.minimumCorrectedLongEdge
           ),
-          let lines = try? recognizeLines(in: correctedImage, orientation: .up),
+          let lines = try? recognizeLines(
+            in: correctedImage,
+            orientation: .up,
+            diagnostics: diagnostics,
+            context: .isolatedCard
+          ),
           !lines.isEmpty
         else {
           continue
@@ -619,12 +830,11 @@ import Foundation
         guard textEvidenceScore >= regionConfiguration.minimumTextEvidenceScore else {
           continue
         }
-        var tokens = AppleVisionAdapter.tokens(
+        let tokens = AppleVisionAdapter.tokens(
           from: lines,
           language: configuration.tokenLanguage,
           infersLanguages: configuration.infersTokenLanguages
         )
-        tokens = refineLowConfidenceTokens(tokens, in: correctedImage)
         guard !tokens.isEmpty else { continue }
 
         let selectionScore = CardRegionSelector.selectionScore(
@@ -638,28 +848,43 @@ import Foundation
             confidence: Double(candidate.confidence),
             selectionScore: selectionScore
           ),
-          selectionScore: selectionScore
+          selectionScore: selectionScore,
+          recognitionImage: correctedImage,
+          quadrilateral: candidate.barcodeMaskQuadrilateral
         )
         if best == nil || selectionScore > best!.selectionScore {
           best = recognition
         }
       }
-      return best
+      // Selection uses only geometry and pre-refinement evidence, so refining the
+      // winner alone gives the same result without re-reading discarded candidates.
+      guard var selected = best else { return nil }
+      selected.tokens = refineLowConfidenceTokens(
+        selected.tokens,
+        in: selected.recognitionImage,
+        diagnostics: diagnostics
+      )
+      return selected
     }
 
     func makeResult(
       from tokens: [OCRToken],
-      cardRegionSelection: AppleVisionCardRegionSelection = .disabled
+      cardRegionSelection: AppleVisionCardRegionSelection = .disabled,
+      diagnostics: ScanInstrumentation? = nil
     ) throws -> AppleVisionScanResult {
       guard !tokens.isEmpty else {
         throw AppleVisionScanError.noRecognizedText
       }
 
       do {
+        let fields = try measure(.classification, diagnostics: diagnostics) {
+          try classifier.classify(tokens)
+        }
         return AppleVisionScanResult(
           tokens: tokens,
-          fields: try classifier.classify(tokens),
-          cardRegionSelection: cardRegionSelection
+          fields: fields,
+          cardRegionSelection: cardRegionSelection,
+          diagnostics: diagnostics?.snapshot(configuration: configuration)
         )
       } catch {
         throw AppleVisionScanError.classificationFailed(error.localizedDescription)
@@ -942,6 +1167,26 @@ import Foundation
     var tokens: [OCRToken]
     var region: AppleVisionDetectedCardRegion
     var selectionScore: Double
+    var recognitionImage: CGImage
+    var quadrilateral: BarcodeMaskQuadrilateral
+  }
+
+  struct TokenRecognitionPayload: Sendable {
+    var tokens: [OCRToken]
+    var cardRegionSelection: AppleVisionCardRegionSelection
+    var recognitionImage: CGImage
+    var cardRegionQuadrilateral: BarcodeMaskQuadrilateral?
+  }
+
+  struct TokenScanWithRecognitionImage: Sendable {
+    var result: AppleVisionTokenScanResult
+    var recognitionImage: CGImage
+    var cardRegionQuadrilateral: BarcodeMaskQuadrilateral?
+  }
+
+  enum RecognitionRequestRole: Equatable, Sendable {
+    case standard
+    case targetedReRecognition
   }
 
   struct CardRegionCandidate: Equatable, Sendable {
@@ -1077,6 +1322,15 @@ import Foundation
 
     private static func clamp(_ value: Double) -> Double {
       min(max(value, 0), 1)
+    }
+
+    var barcodeMaskQuadrilateral: BarcodeMaskQuadrilateral {
+      BarcodeMaskQuadrilateral(
+        topLeft: topLeft,
+        topRight: topRight,
+        bottomLeft: bottomLeft,
+        bottomRight: bottomRight
+      )
     }
   }
 

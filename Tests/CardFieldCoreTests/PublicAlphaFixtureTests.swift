@@ -51,3 +51,41 @@ func publicAlphaFixtureContactValuesAreSynthetic() throws {
   #expect(websites.allSatisfy { $0.hasSuffix(".example") })
   #expect(profiles.allSatisfy { $0.contains("public-alpha-") })
 }
+
+@Test("Column-aware phone linking preserves the public alpha field baseline")
+func columnAwarePublicAlphaEvaluationHasNoFieldErrors() throws {
+  let data = try Data(
+    contentsOf: publicAlphaRepository.appendingPathComponent(
+      "Fixtures/Synthetic/public-alpha.json"
+    )
+  )
+  let fixtures = try FixtureRunner.decode(data: data)
+  let classifier = CardFieldClassifier(
+    columnAwareOptions: ColumnAwareClassifierOptions(mode: .enabled)
+  )
+  let report = try FixtureRunner.evaluate(fixtures, classifier: classifier)
+
+  for field in CardField.allCases {
+    #expect(report.metrics(for: field)?.falsePositive == 0)
+    #expect(report.metrics(for: field)?.falseNegative == 0)
+  }
+}
+
+@Test("Strict-field correction preserves the public alpha field baseline")
+func strictFieldCorrectionPublicAlphaEvaluationHasNoFieldErrors() throws {
+  let data = try Data(
+    contentsOf: publicAlphaRepository.appendingPathComponent(
+      "Fixtures/Synthetic/public-alpha.json"
+    )
+  )
+  let fixtures = try FixtureRunner.decode(data: data)
+  let classifier = CardFieldClassifier(
+    strictFieldCorrectionOptions: StrictFieldCorrectionOptions(mode: .enabled)
+  )
+  let report = try FixtureRunner.evaluate(fixtures, classifier: classifier)
+
+  for field in CardField.allCases {
+    #expect(report.metrics(for: field)?.falsePositive == 0)
+    #expect(report.metrics(for: field)?.falseNegative == 0)
+  }
+}

@@ -1,0 +1,654 @@
+{
+  "schemaVersion": 1,
+  "corpusVersion": "barcode-detection-stress-1",
+  "cases": [
+    {
+      "identifier": "qr-stress-01-small",
+      "layout": "tiny",
+      "payloads": [
+        {
+          "value": "https://qr01.example.net/card"
+        }
+      ],
+      "auxiliaryLines": [
+        "Email qr.stress@example.net"
+      ],
+      "tags": [
+        "barcode-detection-stress",
+        "small"
+      ],
+      "expectedPayloadKinds": [
+        "url"
+      ],
+      "backExpected": {
+        "emailAddresses": [
+          "qr.stress@example.net"
+        ],
+        "websites": [
+          "https://qr01.example.net/card"
+        ]
+      },
+      "mergedExpected": {
+        "emailAddresses": [
+          "qr.stress@example.net"
+        ],
+        "websites": [
+          "https://qr01.example.net/card"
+        ]
+      },
+      "reviewExpected": false
+    },
+    {
+      "identifier": "qr-stress-02-small",
+      "layout": "tiny",
+      "payloads": [
+        {
+          "value": "https://qr02.example.net/card"
+        }
+      ],
+      "auxiliaryLines": [
+        "Email qr.stress@example.net"
+      ],
+      "tags": [
+        "barcode-detection-stress",
+        "small"
+      ],
+      "expectedPayloadKinds": [
+        "url"
+      ],
+      "backExpected": {
+        "emailAddresses": [
+          "qr.stress@example.net"
+        ],
+        "websites": [
+          "https://qr02.example.net/card"
+        ]
+      },
+      "mergedExpected": {
+        "emailAddresses": [
+          "qr.stress@example.net"
+        ],
+        "websites": [
+          "https://qr02.example.net/card"
+        ]
+      },
+      "reviewExpected": false
+    },
+    {
+      "identifier": "qr-stress-03-small",
+      "layout": "tiny",
+      "payloads": [
+        {
+          "value": "https://qr03.example.net/card"
+        }
+      ],
+      "auxiliaryLines": [
+        "Email qr.stress@example.net"
+      ],
+      "tags": [
+        "barcode-detection-stress",
+        "small"
+      ],
+      "expectedPayloadKinds": [
+        "url"
+      ],
+      "backExpected": {
+        "emailAddresses": [
+          "qr.stress@example.net"
+        ],
+        "websites": [
+          "https://qr03.example.net/card"
+        ]
+      },
+      "mergedExpected": {
+        "emailAddresses": [
+          "qr.stress@example.net"
+        ],
+        "websites": [
+          "https://qr03.example.net/card"
+        ]
+      },
+      "reviewExpected": false
+    },
+    {
+      "identifier": "qr-stress-04-low-contrast",
+      "layout": "veryLowContrast",
+      "payloads": [
+        {
+          "value": "https://qr04.example.net/card"
+        }
+      ],
+      "auxiliaryLines": [
+        "Email qr.stress@example.net"
+      ],
+      "tags": [
+        "barcode-detection-stress",
+        "low-contrast"
+      ],
+      "expectedPayloadKinds": [
+        "url"
+      ],
+      "backExpected": {
+        "emailAddresses": [
+          "qr.stress@example.net"
+        ],
+        "websites": [
+          "https://qr04.example.net/card"
+        ]
+      },
+      "mergedExpected": {
+        "emailAddresses": [
+          "qr.stress@example.net"
+        ],
+        "websites": [
+          "https://qr04.example.net/card"
+        ]
+      },
+      "reviewExpected": false
+    },
+    {
+      "identifier": "qr-stress-05-low-contrast",
+      "layout": "veryLowContrast",
+      "payloads": [
+        {
+          "value": "https://qr05.example.net/card"
+        }
+      ],
+      "auxiliaryLines": [
+        "Email qr.stress@example.net"
+      ],
+      "tags": [
+        "barcode-detection-stress",
+        "low-contrast"
+      ],
+      "expectedPayloadKinds": [
+        "url"
+      ],
+      "backExpected": {
+        "emailAddresses": [
+          "qr.stress@example.net"
+        ],
+        "websites": [
+          "https://qr05.example.net/card"
+        ]
+      },
+      "mergedExpected": {
+        "emailAddresses": [
+          "qr.stress@example.net"
+        ],
+        "websites": [
+          "https://qr05.example.net/card"
+        ]
+      },
+      "reviewExpected": false
+    },
+    {
+      "identifier": "qr-stress-06-low-contrast",
+      "layout": "veryLowContrast",
+      "payloads": [
+        {
+          "value": "https://qr06.example.net/card"
+        }
+      ],
+      "auxiliaryLines": [
+        "Email qr.stress@example.net"
+      ],
+      "tags": [
+        "barcode-detection-stress",
+        "low-contrast"
+      ],
+      "expectedPayloadKinds": [
+        "url"
+      ],
+      "backExpected": {
+        "emailAddresses": [
+          "qr.stress@example.net"
+        ],
+        "websites": [
+          "https://qr06.example.net/card"
+        ]
+      },
+      "mergedExpected": {
+        "emailAddresses": [
+          "qr.stress@example.net"
+        ],
+        "websites": [
+          "https://qr06.example.net/card"
+        ]
+      },
+      "reviewExpected": false
+    },
+    {
+      "identifier": "qr-stress-07-blur",
+      "layout": "blurred",
+      "payloads": [
+        {
+          "value": "https://qr07.example.net/card"
+        }
+      ],
+      "auxiliaryLines": [
+        "Email qr.stress@example.net"
+      ],
+      "tags": [
+        "barcode-detection-stress",
+        "blur"
+      ],
+      "expectedPayloadKinds": [
+        "url"
+      ],
+      "backExpected": {
+        "emailAddresses": [
+          "qr.stress@example.net"
+        ],
+        "websites": [
+          "https://qr07.example.net/card"
+        ]
+      },
+      "mergedExpected": {
+        "emailAddresses": [
+          "qr.stress@example.net"
+        ],
+        "websites": [
+          "https://qr07.example.net/card"
+        ]
+      },
+      "reviewExpected": false
+    },
+    {
+      "identifier": "qr-stress-08-blur",
+      "layout": "blurred",
+      "payloads": [
+        {
+          "value": "https://qr08.example.net/card"
+        }
+      ],
+      "auxiliaryLines": [
+        "Email qr.stress@example.net"
+      ],
+      "tags": [
+        "barcode-detection-stress",
+        "blur"
+      ],
+      "expectedPayloadKinds": [
+        "url"
+      ],
+      "backExpected": {
+        "emailAddresses": [
+          "qr.stress@example.net"
+        ],
+        "websites": [
+          "https://qr08.example.net/card"
+        ]
+      },
+      "mergedExpected": {
+        "emailAddresses": [
+          "qr.stress@example.net"
+        ],
+        "websites": [
+          "https://qr08.example.net/card"
+        ]
+      },
+      "reviewExpected": false
+    },
+    {
+      "identifier": "qr-stress-09-blur",
+      "layout": "blurred",
+      "payloads": [
+        {
+          "value": "https://qr09.example.net/card"
+        }
+      ],
+      "auxiliaryLines": [
+        "Email qr.stress@example.net"
+      ],
+      "tags": [
+        "barcode-detection-stress",
+        "blur"
+      ],
+      "expectedPayloadKinds": [
+        "url"
+      ],
+      "backExpected": {
+        "emailAddresses": [
+          "qr.stress@example.net"
+        ],
+        "websites": [
+          "https://qr09.example.net/card"
+        ]
+      },
+      "mergedExpected": {
+        "emailAddresses": [
+          "qr.stress@example.net"
+        ],
+        "websites": [
+          "https://qr09.example.net/card"
+        ]
+      },
+      "reviewExpected": false
+    },
+    {
+      "identifier": "qr-stress-10-center-overlay",
+      "layout": "centerOverlay",
+      "payloads": [
+        {
+          "value": "https://qr10.example.net/card"
+        }
+      ],
+      "auxiliaryLines": [
+        "Email qr.stress@example.net"
+      ],
+      "tags": [
+        "barcode-detection-stress",
+        "center-overlay"
+      ],
+      "expectedPayloadKinds": [
+        "url"
+      ],
+      "backExpected": {
+        "emailAddresses": [
+          "qr.stress@example.net"
+        ],
+        "websites": [
+          "https://qr10.example.net/card"
+        ]
+      },
+      "mergedExpected": {
+        "emailAddresses": [
+          "qr.stress@example.net"
+        ],
+        "websites": [
+          "https://qr10.example.net/card"
+        ]
+      },
+      "reviewExpected": false
+    },
+    {
+      "identifier": "qr-stress-11-center-overlay",
+      "layout": "centerOverlay",
+      "payloads": [
+        {
+          "value": "https://qr11.example.net/card"
+        }
+      ],
+      "auxiliaryLines": [
+        "Email qr.stress@example.net"
+      ],
+      "tags": [
+        "barcode-detection-stress",
+        "center-overlay"
+      ],
+      "expectedPayloadKinds": [
+        "url"
+      ],
+      "backExpected": {
+        "emailAddresses": [
+          "qr.stress@example.net"
+        ],
+        "websites": [
+          "https://qr11.example.net/card"
+        ]
+      },
+      "mergedExpected": {
+        "emailAddresses": [
+          "qr.stress@example.net"
+        ],
+        "websites": [
+          "https://qr11.example.net/card"
+        ]
+      },
+      "reviewExpected": false
+    },
+    {
+      "identifier": "qr-stress-12-center-overlay",
+      "layout": "centerOverlay",
+      "payloads": [
+        {
+          "value": "https://qr12.example.net/card"
+        }
+      ],
+      "auxiliaryLines": [
+        "Email qr.stress@example.net"
+      ],
+      "tags": [
+        "barcode-detection-stress",
+        "center-overlay"
+      ],
+      "expectedPayloadKinds": [
+        "url"
+      ],
+      "backExpected": {
+        "emailAddresses": [
+          "qr.stress@example.net"
+        ],
+        "websites": [
+          "https://qr12.example.net/card"
+        ]
+      },
+      "mergedExpected": {
+        "emailAddresses": [
+          "qr.stress@example.net"
+        ],
+        "websites": [
+          "https://qr12.example.net/card"
+        ]
+      },
+      "reviewExpected": false
+    },
+    {
+      "identifier": "qr-stress-13-dot-style",
+      "layout": "dotStyle",
+      "payloads": [
+        {
+          "value": "https://qr13.example.net/card"
+        }
+      ],
+      "auxiliaryLines": [
+        "Email qr.stress@example.net"
+      ],
+      "tags": [
+        "barcode-detection-stress",
+        "dot-style"
+      ],
+      "expectedPayloadKinds": [
+        "url"
+      ],
+      "backExpected": {
+        "emailAddresses": [
+          "qr.stress@example.net"
+        ],
+        "websites": [
+          "https://qr13.example.net/card"
+        ]
+      },
+      "mergedExpected": {
+        "emailAddresses": [
+          "qr.stress@example.net"
+        ],
+        "websites": [
+          "https://qr13.example.net/card"
+        ]
+      },
+      "reviewExpected": false
+    },
+    {
+      "identifier": "qr-stress-14-dot-style",
+      "layout": "dotStyle",
+      "payloads": [
+        {
+          "value": "https://qr14.example.net/card"
+        }
+      ],
+      "auxiliaryLines": [
+        "Email qr.stress@example.net"
+      ],
+      "tags": [
+        "barcode-detection-stress",
+        "dot-style"
+      ],
+      "expectedPayloadKinds": [
+        "url"
+      ],
+      "backExpected": {
+        "emailAddresses": [
+          "qr.stress@example.net"
+        ],
+        "websites": [
+          "https://qr14.example.net/card"
+        ]
+      },
+      "mergedExpected": {
+        "emailAddresses": [
+          "qr.stress@example.net"
+        ],
+        "websites": [
+          "https://qr14.example.net/card"
+        ]
+      },
+      "reviewExpected": false
+    },
+    {
+      "identifier": "qr-stress-15-dot-style",
+      "layout": "dotStyle",
+      "payloads": [
+        {
+          "value": "https://qr15.example.net/card"
+        }
+      ],
+      "auxiliaryLines": [
+        "Email qr.stress@example.net"
+      ],
+      "tags": [
+        "barcode-detection-stress",
+        "dot-style"
+      ],
+      "expectedPayloadKinds": [
+        "url"
+      ],
+      "backExpected": {
+        "emailAddresses": [
+          "qr.stress@example.net"
+        ],
+        "websites": [
+          "https://qr15.example.net/card"
+        ]
+      },
+      "mergedExpected": {
+        "emailAddresses": [
+          "qr.stress@example.net"
+        ],
+        "websites": [
+          "https://qr15.example.net/card"
+        ]
+      },
+      "reviewExpected": false
+    },
+    {
+      "identifier": "qr-stress-16-perspective",
+      "layout": "strongPerspective",
+      "payloads": [
+        {
+          "value": "https://qr16.example.net/card"
+        }
+      ],
+      "auxiliaryLines": [
+        "Email qr.stress@example.net"
+      ],
+      "tags": [
+        "barcode-detection-stress",
+        "perspective"
+      ],
+      "expectedPayloadKinds": [
+        "url"
+      ],
+      "backExpected": {
+        "emailAddresses": [
+          "qr.stress@example.net"
+        ],
+        "websites": [
+          "https://qr16.example.net/card"
+        ]
+      },
+      "mergedExpected": {
+        "emailAddresses": [
+          "qr.stress@example.net"
+        ],
+        "websites": [
+          "https://qr16.example.net/card"
+        ]
+      },
+      "reviewExpected": false
+    },
+    {
+      "identifier": "qr-stress-17-perspective",
+      "layout": "strongPerspective",
+      "payloads": [
+        {
+          "value": "https://qr17.example.net/card"
+        }
+      ],
+      "auxiliaryLines": [
+        "Email qr.stress@example.net"
+      ],
+      "tags": [
+        "barcode-detection-stress",
+        "perspective"
+      ],
+      "expectedPayloadKinds": [
+        "url"
+      ],
+      "backExpected": {
+        "emailAddresses": [
+          "qr.stress@example.net"
+        ],
+        "websites": [
+          "https://qr17.example.net/card"
+        ]
+      },
+      "mergedExpected": {
+        "emailAddresses": [
+          "qr.stress@example.net"
+        ],
+        "websites": [
+          "https://qr17.example.net/card"
+        ]
+      },
+      "reviewExpected": false
+    },
+    {
+      "identifier": "qr-stress-18-perspective",
+      "layout": "strongPerspective",
+      "payloads": [
+        {
+          "value": "https://qr18.example.net/card"
+        }
+      ],
+      "auxiliaryLines": [
+        "Email qr.stress@example.net"
+      ],
+      "tags": [
+        "barcode-detection-stress",
+        "perspective"
+      ],
+      "expectedPayloadKinds": [
+        "url"
+      ],
+      "backExpected": {
+        "emailAddresses": [
+          "qr.stress@example.net"
+        ],
+        "websites": [
+          "https://qr18.example.net/card"
+        ]
+      },
+      "mergedExpected": {
+        "emailAddresses": [
+          "qr.stress@example.net"
+        ],
+        "websites": [
+          "https://qr18.example.net/card"
+        ]
+      },
+      "reviewExpected": false
+    }
+  ]
+}

@@ -64,7 +64,8 @@ package never performs those actions.
 ## Known limits
 
 - Icon-only phone labels remain unresolved because OCR observations contain no icon semantics.
-- QR payload decoding is not part of the text scanner.
+- QR payload decoding is not part of `card-field-scan`; use the separate local `CardBackScanner`
+  API for an explicitly supplied card-back image.
 - Apple Vision OCR can vary by operating-system and Vision revision.
 - A heavily occluded card or a scene containing several equally complete cards may require a user
   crop or explicit confirmation.

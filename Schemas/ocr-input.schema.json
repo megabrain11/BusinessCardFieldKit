@@ -22,7 +22,8 @@
         "additionalProperties": false
       },
       "confidence": {"type": "number", "minimum": 0, "maximum": 1},
-      "language": {"type": "string"}
+      "language": {"type": "string"},
+      "alternatives": {"type": "array", "items": {"type": "string"}}
     },
     "additionalProperties": false
   }

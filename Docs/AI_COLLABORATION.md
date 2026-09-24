@@ -2,13 +2,617 @@
 
 Living document for humans and AI agents (Codex, Claude Code, others). Update the relevant section when you finish significant work. Newest entries at the top.
 
+## Session 2026-09-25 — v0.2.0 release (completed)
+
+Goal: publish the verified release candidate as `v0.2.0` with records that match what shipped.
+
+### What changed
+
+1. **Roadmap reconciled**: the original `0.2.0` goals (shadow-mode integration pattern, local
+   quality measures, adapter conformance fixtures, explicit migrations) were listed as "before
+   release" but never implemented; the candidate shipped layout-aware interpretation, diagnostics,
+   card-back scanning, and evaluation boundaries instead. With owner approval those goals moved to
+   "Toward `0.3.0`: measured CRM adoption", the rule-pack ecosystem moved to `0.4.0`, and the
+   release notes state the deferral.
+2. **Release finalized**: the owner approved shipping `claude/refine-selected-card-only` in this
+   release. The changelog section is now `[0.2.0] - 2026-09-25`, the README installs
+   `from: "0.2.0"`, and the release notes no longer describe a future tag.
+3. **Publication path**: push the release candidate, open a pull request to `main`, merge after CI
+   passes, then tag the merge commit `v0.2.0`. Publishing the GitHub Release page from
+   `Docs/RELEASE_NOTES_0.2.0.md` remains an owner action.
+4. **Swift 6.0 compatibility**: the candidate's first CI run failed because the Swift 6.0 type
+   checker could not finish a five-way array concatenation in `CardBackBenchmarkTests`; the local
+   Swift 6.3.3 compiler accepted it. The expression is now built step by step with the same order
+   and values. A clean local build found no expression slower than 50 ms to type-check.
+5. **CI runtime**: the first complete test run on the `macos-15` runner failed five
+   Vision-calibrated tests. Five golden scenes read phone numbers differently, the conditional
+   dual-pass gate never skipped, and barcode-recovery evidence differed. With owner approval, CI now
+   runs on `macos-26` with Xcode 26.6, the same OS build (26.6.2, 25G83) used for calibration. CI
+   no longer compiles with Swift 6.0, the declared minimum; the old job is what found item 4.
+
+### Verification
+
+All `Scripts/check-repository.sh` steps passed locally on the release commit, with the recorded
+`grep` credential-scan fallback: strict format lint, build, 202 tests, both synthetic evaluators,
+CLI and benchmark smoke runs, DocC warnings-as-errors, JSON syntax, and `git diff --check`. CI
+results are recorded on the pull request.
+
+### Next steps
+
+- Publish the GitHub Release from the prepared notes.
+- Start `0.3.0` with the measured CRM adoption items in the roadmap, including earlier-OS Vision
+  validation and a build-only Swift 6.0 CI job.
+- `codex/private-barcode-recovery-validation` remains a local-only detailed history; decide
+  whether to keep, push, or retire it now that the squashed release is on `main`.
+
+## Session 2026-09-24 — Refine only the selected card candidate (completed)
+
+Goal: remove targeted re-recognition work that cannot affect the result, without changing tokens,
+fields, region selection, or any default.
+
+### What changed
+
+1. **Selection before refinement**: `isolatedCardResult` previously refined every candidate that
+   passed the contact-text evidence gate, although selection uses only geometry and
+   pre-refinement evidence. It now builds unrefined tokens for each passing candidate, selects the
+   winner with the same strict comparison, and refines only the winner. Refinement never removes
+   tokens, so the emptiness guard keeps its meaning.
+2. **Regression test**: `SelectedCandidateRefinementTests` renders two fictional cards that both
+   pass the gate, using the calibration-only `1.0` threshold with single-pass recognition. The
+   previous implementation issued two targeted requests on this scene; the new one issues one.
+3. **Docs**: the diagnostics contract, architecture overview, and changelog now state that
+   targeted re-recognition runs at most once per scan.
+
+### Verification and evidence
+
+On the two-card scene, tokens, fields, and the isolated region encoded at full precision were
+byte-identical before and after the change, while primary/targeted requests fell from 4/2 to 3/1.
+With the default dual-pass configuration, each skipped refinement saves two requests. The complete
+suite (202 tests), strict format lint, and golden-scene regressions pass.
+
+### Next steps
+
+- This branch starts from the release candidate. Merge it before tagging `v0.2.0`, or after it and
+  move its changelog line into the new `Unreleased` section.
+- Real-photo savings depend on how often several candidates pass the gate with weak lines; measure
+  with the private holdout runner before claiming production latency impact.
+
+## Session 2026-09-24 — Release-candidate reconciliation (completed)
+
+Goal: reconcile repository state after alternating Codex and Claude Code sessions, then carry the
+uncommitted `v0.2.0` preparation onto the release candidate without publishing anything.
+
+### What changed
+
+1. **Branches reconciled**: `codex/private-barcode-recovery-validation` (40 detailed commits from
+   2026-08-27 to 2026-08-31) and `codex/business-card-release-candidate` (the same tree squashed
+   into six commits on `main`) were confirmed tree-identical. The 2026-09-22 preparation, which was
+   uncommitted on the detailed branch, is now one commit on the release candidate. Metadata for
+   three worktrees whose temporary directories no longer exist was pruned; no branch was removed.
+2. **Release claims checked**: changelog dates, `0.1.0` contents, toolchain versions, the CI badge,
+   and release-note statements match the `v0.1.0` tag tree and the local toolchain. The `OCRToken`
+   decoder, schema, and public initializer now agree that identifiers are optional. Added content
+   contains no real names, emails, or phone numbers.
+3. **Records corrected**: a Claude Code session on 2026-08-29 reviewed and edited the quarantined
+   `<repository-backups>/AppleVisionAdapter 2.swift` instead of this package, and wrote the backlog
+   prompts audited in the 2026-08-29 card-back entry. None of those edits reached this repository.
+   The backup was restored byte-for-byte to the SHA-256 recorded in the 2026-08-23 entry.
+
+### Verification
+
+Every `Scripts/check-repository.sh` step ran individually because this machine has no standalone
+`rg` binary; the credential scan used the recorded `grep` equivalent. Strict format lint, build,
+201 tests, both synthetic evaluators, CLI and benchmark smoke runs, DocC warnings-as-errors, JSON
+syntax, the credential scan, and `git diff --check` passed.
+
+### Next steps (human approval required)
+
+1. Neither `codex/*` branch above existed on `origin` before this session. Push the release
+   candidate, merge it to `main`, rerun CI on the merge commit, then tag and publish `v0.2.0` from
+   `Docs/RELEASE_NOTES_0.2.0.md`.
+2. Keep `codex/private-barcode-recovery-validation` as the detailed history until the release is
+   published.
+3. `claude/refine-selected-card-only` builds on this candidate with an exact-parity change that
+   runs targeted re-recognition only for the selected card. Decide whether it ships in `v0.2.0`;
+   its own handoff entry records the evidence.
+
+## Session 2026-09-22 — Open-source adoption and v0.2.0 release preparation (completed)
+
+Goal: prepare the existing architecture and functionality for external Swift Package adoption and
+a future public `v0.2.0` release without publishing, changing scanner defaults, or overstating use.
+
+### What changed
+
+1. **External onboarding**: the README now leads with the local, privacy-first, deterministic,
+   explainable, multilingual, review-first contract; adds verified CI/toolchain/platform/license
+   badges; documents Xcode and SwiftPM installation; and keeps a tested core and Apple Vision quick
+   start ahead of internal benchmark detail.
+2. **Release and governance accuracy**: the changelog and roadmap now acknowledge the existing
+   `v0.1.0` tag, proposed `v0.2.0` notes cover features, privacy, platforms, limitations, and
+   pre-1.0 compatibility, and support/security/contribution guidance reflects current maintenance.
+   A privacy-gated general feature-request form complements the existing bug and rule-pack forms.
+3. **Reusable boundary**: the README records that AnswerSheetFieldKit reuses the provider-neutral
+   token layer while keeping answer-sheet semantics separate. This is stated as one concrete reuse
+   example, not a popularity or production-adoption claim.
+4. **Contract repair**: `ocr-input.schema.json` now exposes `OCRToken.alternatives`; missing JSON
+   identifiers decode to the public initializer's empty default. Regression tests pin the schema,
+   decoder compatibility, and README quick start. Mangled OCR test domains now use `.example`.
+5. **Contributor boundary**: `AGENTS.md` remains authoritative. Human approval is explicit for
+   architecture, privacy-sensitive behavior, experimental defaults, merges, tags, and releases.
+
+### Verification and release boundary
+
+`Scripts/check-repository.sh` exited 0 with 201 tests. Both synthetic field evaluators, CLI smoke
+tests, aggregate OCR/card-back benchmarks, strict formatting, DocC warnings-as-errors, JSON syntax,
+and credential checks passed. A new scratch Swift package resolved the public GitHub URL at
+`v0.1.0`, built `CardFieldCore` and `AppleVisionAdapter`, and ran the README quick start successfully.
+No real card data, private application data, binary fixture, secret, or non-reserved test domain was
+added.
+
+No tag or GitHub Release was created. After human review, merge the candidate to the default branch,
+rerun CI on that commit, update repository description/topics and protections, then tag and publish
+`v0.2.0` from the prepared notes.
+
+## Session 2026-08-31 — Private source-barcode recovery validation boundary (completed)
+
+Goal: make the default-off source-barcode recovery experiment measurable on external physical
+photos without importing private data, overstating unlabeled detection as exactness, or changing
+the shipped scanner path.
+
+### What changed
+
+1. **Truth-aware private manifest**: existing manifests remain compatible. Optional
+   `barcodeTruthAvailable` and `fieldTruthAvailable` flags separate fully labeled cases from
+   detection-only cases. Unavailable truth requires empty expected values and fails closed if a
+   hidden label is present.
+2. **Hardened external boundary**: root, manifest, directory components, and images must be regular
+   non-symlink files beneath the configured root. The command accepts the card-back root and the
+   legacy private-corpus alias, rejects conflicting roots, and keeps missing configuration as a
+   redacted successful skip.
+3. **Paired aggregate experiment**: `--barcode-detection-recovery-experiment` requires at least
+   three measured runs and alternates baseline/recovery order. It reports only truth-aware rates,
+   recovery/regression counts, preservation, request distributions, parity, and signed latency.
+4. **Conservative review gate**: four distinct recovered baseline failures, baseline-success
+   evidence, zero detection/field regression, baseline detection preservation, and a fixed 250 ms
+   p95 duration-delta budget are required for `eligibleForHumanReview`. That state never changes
+   the default automatically.
+
+### Verification and decision
+
+`./Scripts/check-repository.sh` exited 0; 199 tests passed; phase1/public-alpha evaluation,
+golden scenes, card-back evidence, projective masking, and synthetic barcode-recovery evidence all
+remained green. Transient synthetic tests exercise truth separation, aggregate redaction, bounded
+request counts, legacy envelope decoding, and root/manifest/image symlink rejection. No private
+photo, OCR, payload, path, expected value, or per-case output was committed.
+
+No external `PRIVATE_CARD_BACK_CORPUS_ROOT` was configured in this session, so there is no new
+physical-photo performance claim. Keep source recovery default OFF. The next evidence step is a
+human-labeled external corpus containing at least four distinct baseline failures plus successful
+controls across supported devices, materials, lighting, and Vision versions.
+
+## Session 2026-08-30 — Source barcode detection stress recovery (completed)
+
+Goal: respond to the observed source-QR detection bottleneck with a bounded, measurable experiment
+without changing the shipped path or committing any private card data.
+
+### What changed
+
+1. **Default-off one-request recovery**: after an empty initial source barcode result only, the
+   adapter performs deterministic full-frame upscale, grayscale, contrast, sharpening, and Otsu
+   thresholding followed by exactly one retry. Initial success, preprocessing failure, and retry
+   failure all preserve the baseline behavior.
+2. **Content-free diagnostics v2**: back diagnostics add the source recovery request count and
+   execution boolean with schema-1 decoding defaults. No payload, OCR text, token, confidence,
+   geometry, image, path, or case identity is exposed.
+3. **Independent stress corpus**: eighteen runtime-rendered fictional scenes cover tiny,
+   very-low-contrast, blurred, center-overlaid, dot-styled, and strongly projective QR codes. The
+   repository contains only the manifest; images are generated deterministically in memory.
+4. **Paired aggregate benchmark**: `--barcode-detection-recovery-experiment` alternates execution
+   order and separates QR payload exactness from field exactness. It reports only aggregate
+   recoveries/regressions, field/token/card-region parity, bounded request counts, style summaries,
+   and latency distributions.
+
+### Evidence and decision
+
+One warmup plus three measured runs produced 54 pairs. Baseline QR exactness was 66.7% and the
+experiment reached 72.2%, recovering three repeated samples from one dot-style scene with zero QR
+or field regressions. Baseline-exact preservation, token parity, and card-region parity were 100%.
+The retry executed for 18/54 pairs; source request p95 increased from 1 to 2, while median extra
+requests remained 0. Strong-perspective and most dot-style scenes remain unresolved.
+
+Keep recovery default OFF. Synthetic recovery establishes that the bounded path can help, not that
+it should ship enabled. The next decision requires an external aggregate-only physical-photo run
+covering damaged, glossy, partial, stylized, and small QR codes across supported devices and Vision
+versions.
+
+## Session 2026-08-30 — Private projective card-back validation (completed)
+
+Goal: carry the exact projective barcode-mask experiment into the external private card-back
+boundary without changing the shipped scanner default or exposing private inputs.
+
+### What changed
+
+1. **Shared paired aggregation**: the synthetic and private runners now use the same deterministic
+   schema-1 comparison builder for token, field, barcode, card-region, request, fallback, and signed
+   duration evidence.
+2. **Opt-in private experiment**: `card-field-private-back-benchmark
+   --projective-mask-experiment` alternates baseline/experimental order by repeat and sorted input
+   position. It requires three measured repetitions and leaves the existing private benchmark
+   behavior unchanged when the flag is absent.
+3. **Redacted envelope**: the command envelope gained an optional comparison payload with
+   backward-compatible decoding. Reports omit filenames, root paths, OCR, tokens, payloads,
+   expected values, tags, case identifiers, and corpus identity. A missing root remains an explicit
+   redacted skip.
+4. **Boundary regression tests**: tests cover real runner execution over a transient isolated-card
+   scene, paired parity and request reduction, aggregate redaction, legacy envelope decoding, and
+   the minimum-run guard.
+
+### Decision and remaining risk
+
+- Keep `.rectifiedRedetection` as the default. Private aggregate evidence is necessary but not
+  sufficient for promotion; representative physical photos and human acceptance are still needed.
+- Interpret signed latency deltas as host/runtime observations. Run multiple physical-device
+  cohorts before treating them as production savings.
+- Do not preserve private raw reports outside the configured corpus boundary or add per-case output.
+
+## Session 2026-08-29 — Exact projective barcode-mask experiment (completed)
+
+Goal: evaluate whether source barcode observations can replace the isolated-card masking request
+without changing OCR fields, public barcode metadata, or the shipped default.
+
+### What changed
+
+1. **Fail-closed projective mapper**: `BarcodeMaskingExperiment.swift` maps each source barcode
+   quadrilateral to the normalized rectified card image with a four-point homography solved by
+   deterministic Gaussian elimination. Non-finite, degenerate, singular, or out-of-range geometry
+   returns `nil`, which selects the existing exact rectified-image redetection path.
+2. **Opt-in strategy contract**: `AppleVisionScanConfiguration.barcodeMaskingStrategy` defaults to
+   `.rectifiedRedetection`. `.projectiveSourceObservation` is additive and experimental. Public
+   barcode metadata remains source-based; only the internal OCR masking regions change.
+3. **Content-free diagnostics**: back diagnostics add the strategy, projective-applied flag, and
+   fallback count with backward-compatible decoding. No payload, OCR text, token value, geometry,
+   image, path, or case identity is serialized.
+4. **Paired aggregate benchmark**: `--card-back-mask-experiment` runs deterministic alternating
+   baseline/experimental order and emits a separate schema-1 report with parity, unsigned request
+   savings, signed total/isolated latency deltas, and fallback counts. The benchmark renders each
+   scene once per pair and keeps all output aggregate-only.
+
+### Verification and evidence
+
+`swift format lint --strict --recursive Sources Tests`, `swift build`, and the focused projective
+suite pass. The fourteen card-back scenes remain parity-identical for tokens, fields, detected
+barcodes, and card-region selection. With one warmup and five measured runs (70 paired samples),
+projective mapping applied to all 10 isolated samples with zero fallbacks; isolated request
+reduction was 1 at p50/p95. Isolated signed duration delta was −17.49 ms p50 and −1.86 ms p95;
+all-sample delta was −0.23 ms p50 and 7.54 ms p95 on the reference host.
+
+### Decision and remaining risk
+
+- Keep `.rectifiedRedetection` as the default. The experiment is useful for measuring request and
+  latency savings but synthetic Core Text timing is machine-specific and cannot establish camera,
+  glossy-print, damaged-code, or Vision-version behavior.
+- Run the private card-back holdout and physical-device acceptance before considering promotion.
+- Preserve the exact quadrilateral contract and fail-closed fallback; do not replace it with a
+  bounding-box approximation or automatic rollout.
+
+## Session 2026-08-29 — Card-back masking diagnostics (completed)
+
+Goal: measure the extra barcode request used to mask QR regions after perspective isolation without
+changing recognition policy, serializing private content, or adding default-path instrumentation.
+
+### What changed
+
+1. **Default-off back diagnostics v1**: `AppleVisionBackScanDiagnostics` reports fixed stage spans,
+   source and isolated-mask barcode-request counts, and whether rectified mask detection executed.
+   It contains no OCR text, decoded payload, confidence, geometry, image, path, token, or arbitrary
+   metadata.
+2. **Parity-preserving instrumentation**: disabled calls create no instrumentation object. Enabled
+   calls keep nested token diagnostics off, measure source barcode detection, token recognition,
+   rectified mask detection, classification/merge, and total scan time, and return identical tokens,
+   fields, barcode metadata, and card-region decisions.
+3. **Aggregate report v3**: card-back benchmark reports optionally include content-free stage and
+   request distributions. The optional field keeps schema-2 reports decodable, and aggregation is
+   independent of sample order.
+4. **Path evidence**: disabled and full-image fallback scans issue one source barcode request. An
+   isolated scan issues that request plus exactly one request on the rectified recognition image.
+
+### Verification and evidence
+
+`swift test --no-parallel` passes 180 tests. Diagnostics ON/OFF parity holds across all fourteen
+synthetic back scenes. One warmup plus three measured runs produced 42 samples with all field and
+decision rates at 100%. Six isolated samples executed the additional masking request; its direct
+stage span was p50 14.4 ms and p95 21.1 ms on that host. Source requests were 1 at p50/p95, while
+total barcode requests were 1 at p50 and 2 at p95.
+
+### Decision and remaining risk
+
+- Keep exact rectified-image redetection unchanged. Its measured synthetic cost is modest and
+  preserves coordinate correctness; do not replace it with a bounding-box approximation.
+- The outer total begins after encoded-image decoding, so it is a scanner-stage diagnostic rather
+  than end-to-end ingestion latency.
+- Machine-specific synthetic timing cannot establish real-camera value. Gloss, damaged or partial
+  QR codes, device variance, and private CRM acceptance still require the external runner and human
+  review before any default or optimization decision.
+
+## Session 2026-08-29 — Exact isolated-card barcode masking (completed)
+
+Goal: remove QR-shaped OCR noise after perspective card isolation without changing public barcode
+geometry or approximating a source bounding box in rectified coordinates.
+
+### What changed
+
+1. **Exact recognition image handoff**: the token scanner now has a package-internal result that pairs the unchanged public token result with the exact upright image used for OCR. The image exists only for the synchronous call and is neither retained nor returned publicly.
+2. **Coordinate-consistent masking**: disabled and fallback back scans reuse source barcode regions. Isolated scans run a content-free barcode-region request on the perspective-corrected recognition image, then filter only tokens that substantially overlap those rectified regions. Public decoded-barcode metadata remains source-based.
+3. **Whole-card projective scenes**: the back corpus now contains fourteen cases and sixteen QR codes. Two cases transform the entire card, its nearby contact text, and one or two QR codes together and require `.isolated` rather than fallback.
+4. **Aggregate contract v2**: reports add card-region decision accuracy. No OCR text, payload, geometry, path, image, token, or case identity is serialized.
+5. **Regression coverage**: direct tests cover unsupported QR noise, nearby email and phone preservation, public/internal token parity, automatic perspective isolation, multiple QR codes, and EXIF rotation.
+
+### Verification
+
+`swift test --no-parallel` passes 176 tests. All fifty golden scenes remain exact in base,
+column-aware, and strict-field configurations. The fourteen-case back corpus detects all sixteen QR
+codes and holds payload-kind, back-field, merged-field, duplicate, review, and card-region decision
+rates at 100%. Public-alpha remains zero false positives and zero false negatives.
+
+### Remaining risk
+
+- An isolated back performs one additional local barcode-region request. Its latency impact is included in total back-scan timing but not yet broken out as a public diagnostics stage.
+- Real camera, glossy print, damaged QR, partial crop, device variance, and private CRM acceptance still require the external runner and human review.
+- A completed private aggregate is evidence for review, never automatic approval.
+
+## Session 2026-08-29 — Card-back aggregate evaluation (completed)
+
+Goal: turn the new card-back scanner into a measurable regression surface and define a privacy-safe
+real-photo acceptance boundary without committing any card image or decoded payload.
+
+### What changed
+
+1. **Deterministic back corpus**: `Fixtures/CardBack/manifest.json` defines twelve fictional runtime-rendered scenes and thirteen QR codes spanning vCard 3/4, URLs, unsupported content, small/low-contrast, rotation, perspective, multiple QR, visible text, duplicate suppression, and identity-conflict review.
+2. **Aggregate contract**: `card-field-benchmark --card-back-evidence` reports only barcode counts, payload-kind/back/merged/duplicate/review rates, p50/p95 latency, and fixed tag coverage. It has no payload, OCR text, geometry, image, path, or case-identity field.
+3. **QR OCR false-positive fix**: the back scanner classifies token-only OCR after removing tokens substantially overlapping detected barcodes in shared full-image coordinates. Perspective-isolated tokens fail closed and remain unchanged until exact coordinate mapping is available.
+4. **External private boundary**: `card-field-private-back-benchmark` reads relative regular files only from `PRIVATE_CARD_BACK_CORPUS_ROOT`, rejects path escape, duplicate references and unknown fields, requires at least three measured runs, and emits no corpus identity or private tags. Missing configuration returns a redacted successful skip, which is insufficient evidence.
+5. **Evidence result**: all twelve synthetic cases reproduce the thirteen expected barcode kinds, back fields, merged fields, duplicate decisions, and review decisions exactly. This remains synthetic-only evidence and cannot approve a physical-device or production rollout.
+
+### Verification
+
+`swift test --no-parallel` passes 173 tests. The card-back benchmark reports 12/12 exact cases,
+13/13 detected barcode kinds, and 100% duplicate/review agreement. Public-alpha retains zero false
+positives and zero false negatives. The official repository check includes the new CLI smoke test,
+synthetic back run, and manifest JSON validation.
+
+### Remaining risk
+
+- QR-region masking is exact for disabled or full-image-fallback OCR. Perspective-isolated OCR uses rectified coordinates while barcode observations use source coordinates, so those tokens are conservatively retained.
+- Real camera, glossy print, damaged QR, partial crop, device variance, and private CRM acceptance still require the external runner and human review.
+- A completed private aggregate is evidence for review, never automatic approval.
+
+## Session 2026-08-29 — Card-back barcode and vCard composition (completed)
+
+Goal: implement the first still-missing, in-scope item from the module backlog without recreating mature core models, moving image types into the core, or adding host-owned camera/contact storage behavior.
+
+### What changed
+
+1. **Provider-neutral vCard parser**: `VCardParser` accepts vCard 3.0/4.0 strings and UTF-8/EUC-KR data, unfolds lines, decodes escaped and quoted-printable values, and maps only supported contact properties into sourced suggestions.
+2. **Same-card composition**: `CardScanSession` returns front, optional back, and deterministic merged results. Duplicate contacts collapse, barcode evidence wins duplicates, phone subtypes deduplicate across families, and conflicting singular values preserve the losing candidate and require review.
+3. **Local back adapter**: `CardBackScanner` combines the existing OCR pipeline with `VNDetectBarcodesRequest`. QR-only backs succeed without OCR text. vCard and explicit HTTP(S) URLs become fields; unsupported content exposes metadata without the raw payload.
+4. **Boundary preserved**: `CardFieldCore` still imports Foundation only. Vision and image decoding remain in `AppleVisionAdapter`; no camera, Contacts framework, logging, storage, telemetry, or network behavior was added.
+5. **Coverage**: fictional tests cover vCard versions, folded and escaped values, UTF-8/EUC-KR and quoted-printable decoding, invalid inputs, QR detection, URL/unsupported payloads, duplicate and subtype merging, conflict review, and input-order determinism.
+
+### Backlog audit
+
+- The attached model, classifier, preprocessing, language-inference, and pure-logic test prompts were already implemented in more mature forms and were not duplicated.
+- Contact writes and camera UI remain host-owned and excluded by the permanent package boundary.
+- Future back-scan work should add an external aggregate-only real-device acceptance harness before expanding supported barcode semantics.
+
+## Session 2026-08-28 — Conditional dual-pass experiment (completed)
+
+Goal: evaluate a default-off second-request fast path without weakening the shipped dual-pass default or using unavailable private photos.
+
+### What changed
+
+1. **Fail-closed eligibility**: a primary pass may skip only with at least two complete strict-contact families, all-line confidence at or above 0.82, Latin-only single-script content, simple single-column bounded geometry, no strict alternative/country-code conflict, and no base review warning.
+2. **Structural rejection**: full-image fallback and every targeted re-recognition request always retain dual-pass. Low confidence, mixed script, multiple columns, crop-edge contact, conflicting alternatives, insufficient contacts, and review warnings also retain the existing request and merge.
+3. **Redacted diagnostics v2**: fixed reason counts and skip totals are additive and schema-1 diagnostics decode with empty disabled defaults. No triggering OCR value, confidence, geometry, image, or path is exposed.
+4. **Paired benchmark v2**: shipped and conditional scans alternate order per scene. Reports include aggregate skip reasons, total second-request delta, exact/review pair changes, and p50/p95 deltas.
+5. **Evidence**: three measured runs kept golden 150/150 and stress 72/72 exact with zero review changes. The experiment saved 72 and 39 secondary requests respectively; golden p50/p95 changed by -20.6/-4.1 ms and stress by -61.9/-69.2 ms.
+
+### Decision
+
+Keep the implementation as a default-off experiment only. Do not enable it by default or claim production improvement until the external private real-photo holdout passes. The existing shipped OCR path remains unchanged.
+
+## Session 2026-08-28 — Spaced email OCR recovery (completed)
+
+Goal: continue public performance work while the original private photos are unavailable, and eliminate the single shared stress-corpus contact failure without changing OCR policy.
+
+### What changed
+
+1. **Root cause isolated**: the strongest default-threshold blur case produced a complete email with spaces around `@`. Email extraction missed it and website extraction promoted the domain fragment; targeted ON and OFF failed identically.
+2. **Narrow normalization**: base extraction accepts optional whitespace around `@` only inside complete email syntax, normalizes the compact value, and retains the raw spaced reading as `originalValue`. The website guard now recognizes a spaced preceding `@`.
+3. **False-positive guards**: prose without a dotted domain stays unresolved, while a separate explicit website on the same OCR line remains classified.
+4. **Stronger stress gate**: the paired benchmark test now requires 24/24 exact and zero false clears in both configurations.
+5. **Updated evidence**: a repeat measured 24/24 on both paths with no paired accuracy difference. Targeted execution remained 75% and substantially slower, so no OCR threshold or default changed.
+
+The prior private holdout attempt remains unavailable because only one of the original nineteen transient attachments is still accessible. No partial private corpus or inferred ground truth was created.
+
+## Session 2026-08-28 — Private targeted re-recognition holdout runner (completed)
+
+Goal: make natural low-confidence real-photo evidence measurable without committing or reporting private source identity and without changing recognition policy.
+
+### What changed
+
+1. **External-only corpus boundary**: `card-field-private-benchmark` reads `manifest.json` and relative images only from `PRIVATE_CARD_CORPUS_ROOT`. Absolute/traversal paths, duplicate references, symlink escape, unknown fields, and unavailable files fail closed; errors are generic.
+2. **Aggregate paired evidence**: every case runs at least three repetitions with alternating ON/OFF order. Reports include exact/review rates, field support, false clears, isolation/fallback counts, request and latency distributions, recoveries/regressions, and deterministic case-cluster bootstrap intervals without source identifiers or OCR content.
+3. **Fixed shipped policy**: the external schema cannot configure confidence. Runs use the production `0.35` targeted threshold, and private evaluation cannot mutate scanner defaults.
+4. **Fail-closed decision gate**: fewer than four naturally executing cases is insufficient. Any field regression or excessive p95 increase rejects a change. A clean result permits human review only.
+5. **Current result**: no private corpus is configured in this environment. The CLI emits a redacted successful skip, so real-photo evidence remains unavailable rather than being inferred from synthetic data.
+
+### Verification
+
+Five new tests cover redaction, deterministic order-independent bootstrap, decision gates, filesystem boundaries, and a transient fictional image run with three paired repetitions. `./Scripts/check-repository.sh` passes with 147 tests; public-alpha base, column-aware, and strict-field configurations retain zero false positives and zero false negatives. The private CLI help and missing-corpus skip paths also pass. No private result was fabricated.
+
+## Session 2026-08-28 — Targeted re-recognition stress evidence (completed)
+
+Goal: measure a previously unexercised OCR stage without changing recognition policy or weakening the 50-case golden baseline.
+
+### What changed
+
+1. **Separate 12 × 2 stress corpus**: a versioned fictional manifest adds contact-only small text, blur, low contrast, glare, shadow, mixed script, isolation success, and forced full-image fallback. Existing golden content and expectations are unchanged.
+2. **Transparent threshold cohorts**: four cases use the shipped `0.35` confidence limit, eighteen use a benchmark-only `1.0` calibration limit to guarantee measurable stage execution, and two use a zero-threshold non-execution control. Reports expose only cohort counts.
+3. **Paired aggregate evaluator**: targeted enabled/disabled scans alternate execution order and report field-family exact rates, false clears, review changes, recovered/regressed fields, request counts, and total/targeted p50/p95. OCR values, confidence, images, paths, tags below a four-sample boundary, and case identifiers are absent.
+4. **Safety tests**: stress rendering and aggregation are deterministic; pair order does not change results; diagnostics OFF/ON preserves tokens, fields, and card-region selection; calibrated cases execute, controls do not; isolation and fallback paths are both covered.
+5. **Finding**: one warmup plus one measured run produced 23/24 exact cases on both paths, zero recoveries, zero regressions, and zero review changes. Enabled execution occurred in 18/24 cases, increased total p50 from 133 ms to 341 ms, and added two targeted requests at p50/p95. Shipped-threshold stress cases did not execute.
+
+### Decision
+
+- Keep the shipped targeted re-recognition policy and threshold unchanged.
+- Do not promote the calibration threshold; it is measurement scaffolding only.
+- The next evidence should be a private, aggregate-only real-photo holdout containing natural `≤0.35` confidence cases. Synthetic forced execution does not establish recovery value.
+
+## Session 2026-08-28 — Golden corpus expansion and diagnostics baseline (completed)
+
+Goal: turn the five-scene smoke set into a useful synthetic regression/measurement corpus and use the redacted diagnostics contract to bound the next adaptive OCR experiment without changing recognition policy.
+
+### What changed
+
+1. **Versioned 25 × 2 corpus**: schema v2 separates four fictional content profiles from 25 layout templates. Each layout expands into exactly two deterministic variants, for 50 cases spanning multilingual, layout, lighting, blur, crop, QR, overlap, background, and card-isolation tags. Images remain runtime-only Core Text/Core Graphics renders.
+2. **Shared benchmark module**: `AppleVisionBenchmarking` owns manifest decoding, deterministic rendering, exact-field comparison, aggregate distributions, tag summaries, and the four non-mutating configurations. Small tag groups below four samples are omitted from detailed output.
+3. **Aggregate-only CLI**: `card-field-benchmark` separates warmup from measured runs and serializes only corpus counts/tags, field parity/review rates, p50/p95 timing, Vision request counts, execution rates, and fallback rates. It has no case identifier, OCR/token/confidence, image, or path field.
+4. **Expanded gates**: all 50 cases pass the shipped default, column-aware, and strict-field configurations. Diagnostics OFF/ON preserve identical token, field, and card-region results for all cases. Manifest hygiene, deterministic rendering, report redaction, configuration minimality, percentile determinism, and input-order independence have direct tests.
+5. **Measured conclusion**: one warmup plus one measured run kept 50/50 exact cases under default, while disabling dual-pass reduced median latency and one text request but fell to 46/50. Targeted re-recognition executed zero times, so its isolated value/cost is insufficiently exercised. No adaptive gate was implemented.
+
+### Next decision boundary
+
+- Do not make single-pass the default from synthetic timing; the observed 8% exact-case loss is a hard regression.
+- The only justified next experiment is a default-OFF, fail-closed dual-pass skip gated by complete primary-pass contact syntax and absence of low-confidence/multilingual evidence, evaluated first on a private real-photo holdout.
+- Add targeted-re-recognition-positive private cases before drawing conclusions about that stage.
+
+## Session 2026-08-27 — Adaptive OCR diagnostics integration (completed)
+
+Goal: integrate the observation layer from the historical adaptive branch on current `scanTokens`/column-aware/strict-field architecture without adopting an unmeasured recognition policy.
+
+### What changed
+
+1. **Shared opt-in contract**: `AppleVisionDiagnosticsOptions` defaults to disabled. Both `AppleVisionScanResult` and `AppleVisionTokenScanResult` add an optional versioned, Codable `AppleVisionScanDiagnostics` payload; disabled calls return `nil` and allocate no instrumentation object.
+2. **Current-pipeline instrumentation**: the shared recognition path measures fixed stages and counts rectangle, saliency, primary/secondary text, and targeted text requests. It reports configured/executed dual-pass and targeted refinement plus card-isolation attempt/success/fallback flags. Repeated candidate requests aggregate deterministically.
+3. **Privacy boundary**: diagnostics contain only fixed identifiers, durations, counts, and booleans. OCR text, alternatives, token values/confidence, geometry, images, paths, and arbitrary metadata are excluded by design and contract tests. No logging or persistence was added.
+4. **Parity before policy**: no adaptive gating or alternative promotion was integrated. The existing OCR path, reusable token API, column-aware classifier, and strict-field corrector remain unchanged. All five golden scenes compare OFF versus ON and require identical tokens, fields, and region selection; token-only scanning has an independent parity/request-count test.
+5. **Historical audit**: the 10 commits on `codex/adaptive-ocr-diagnostics` were reviewed without cherry-picking or modifying its worktree. Only diagnostics concepts were reimplemented; eight evolving adaptive-policy commits were deferred until current measurements justify a strategy. The commit-by-commit table lives in `Docs/ADAPTIVE_OCR_DIAGNOSTICS.md`.
+
+### Verification
+
+```sh
+swift test --no-parallel
+swift run card-field-eval Fixtures/Synthetic/public-alpha.json
+./Scripts/check-repository.sh
+```
+
+The base, column-aware, and strict-field public-alpha configurations retain zero false positives and zero false negatives through their regression tests. Diagnostics OFF/ON preserve all five golden results and the provider-neutral token-only result.
+
+### Remaining work
+
+- Collect stage/request distributions on the expanded synthetic and private aggregate-only corpora before proposing conditional dual-pass.
+- Treat overlapping stage spans correctly: targeted re-recognition can contain primary/secondary request time, so only total duration is end-to-end latency.
+- Keep any future adaptive policy independently opt-in and compare accuracy, review rate, p50/p95, and request savings against the unchanged default.
+- Expand the five-scene golden regression set before using it as a performance corpus.
+
+## Session 2026-08-27 — Strict-field OCR alternative correction (completed)
+
+Goal: allow lower-ranked OCR readings to recover strict contact syntax without changing default classification or letting alternatives influence free-text fields.
+
+### What changed
+
+1. **Independent opt-in**: `StrictFieldCorrectionOptions` defaults to disabled and adds no output field, warning case, schema, or contract-version change. Disabled mode remains byte-for-value equivalent to the legacy classifier.
+2. **Narrow syntax scope**: only email, explicitly prefixed website (`http`, `https`, or `www`), and phone-shaped lines can inspect alternatives. Name, title, organization, department, and address paths use original tokens plus legacy contact-consumption and email-hint state.
+3. **Fail-closed selection**: a replacement requires exactly one normalized valid alternative, a syntax-score margin of at least `0.30`, and token confidence of at least `0.55`. Candidate array order has no effect. Invalid readings are ignored and duplicate renderings collapse by normalized value.
+4. **Conflict behavior**: a valid primary is never replaced. Competing valid values, low confidence, or insufficient margin retain the original and append `reviewRecommended`; phone conflicts also append `ambiguousPhoneNumber`. Phone alternatives must preserve the printed mobile/work/fax subtype, and local-versus-international variants are never silently reconciled.
+5. **Regression coverage**: tests cover disabled parity, email/website/phone recovery, duplicates, competing values, valid-primary preservation, invalid candidates, subtype changes, low confidence, country-code conflicts, free-text isolation, input-order determinism, public-alpha parity, and all five golden scenes with the option enabled.
+
+### Verification
+
+```sh
+swift test --no-parallel             # 129 passed
+swift run card-field-eval Fixtures/Synthetic/public-alpha.json
+swift run card-field-eval Fixtures/Synthetic/phase1.json
+./Scripts/check-repository.sh
+```
+
+The base, column-aware, and strict-field public-alpha runs retain zero false positives and zero false negatives. The golden suite passes with strict-field correction both off and on.
+
+### Remaining work
+
+- Expand five generated golden scenes toward at least 25 layouts with two deterministic variants each before treating them as a performance corpus.
+- Rebase and audit the separate adaptive OCR diagnostics branch before integrating latency work; it predates the reusable token API, column-aware classifier, and strict-field corrector.
+- Measure correction acceptance and unnecessary-review rates on a private fictionalized or transient real-photo corpus before recommending opt-in for production.
+- Keep real-photo and physical-device evaluation private and report aggregates only.
+
+## Session 2026-08-27 — Column-aware phone label linking (completed)
+
+Goal: use `LayoutAnalyzer` output conservatively when reading order separates a visible phone label from its value, without changing the default classifier result.
+
+### What changed
+
+1. **Safe opt-in API**: `ColumnAwareClassifierOptions` defaults to disabled. `classifyWithDiagnostics` returns the regular `CardFieldResult` plus per-call diagnostics without mutable classifier state; the existing `classify` signature and default behavior are unchanged.
+2. **Real column evidence**: candidate scoring consumes `LayoutAnalyzer.rows` and `LayoutAnalyzer.columns`, distinguishes same-row cross-column links from vertically aligned adjacent rows, applies deterministic thresholds, and fails closed when layout confidence is low.
+3. **Phone-only v1 scope**: the additive pass recovers only mobile/work/fax values missed by the legacy pass. It never removes or rewrites an existing value, does not invent a country prefix, suppresses duplicates, and routes tied candidates to `ambiguousPhoneNumber` plus `reviewRecommended`.
+4. **Regression coverage**: active-path tests cover disabled parity, cross-column and vertical recovery, Korean/English subtype labels, multiple labels, conflicts, low-confidence and invalid-geometry fallback, input-order determinism, duplicate suppression, local/international normalization, diagnostics JSON, public-alpha parity, and the two-column golden scene.
+5. **Compatibility**: no output-contract enum or schema change was required. Hosts opt in by injecting a `CardFieldClassifier` configured with `ColumnAwareClassifierOptions(mode: .enabled)` into `AppleVisionScanner`.
+
+### Verification
+
+```sh
+swift build
+swift test --no-parallel             # 113 passed
+swift run card-field-eval Fixtures/Synthetic/public-alpha.json
+swift run card-field-eval Fixtures/Synthetic/phase1.json
+swift run card-field-scan --help
+./Scripts/check-repository.sh
+```
+
+Both evaluators retain zero false positives and zero false negatives. The public-alpha corpus is also evaluated with column-aware mode enabled in the test suite.
+
+### Remaining work
+
+- Expand five generated golden scenes toward at least 25 layouts with two deterministic variants each before treating them as a performance corpus.
+- Evaluate `OCRToken.alternatives` for syntax-valid strict-field recovery without changing the token contract.
+- Rebase and audit the separate adaptive OCR diagnostics branch before integrating latency work; it predates the reusable token API and this classifier branch.
+- Keep real-photo and physical-device evaluation private and report aggregates only.
+
+## Session 2026-08-26 — Golden-scene regression corpus (completed)
+
+Goal: close the first item from the open-work list by making preprocessing/recognition changes measurable per change. No commits or pushes were made in this session.
+
+### What changed
+
+1. **Manifest-driven synthetic scenes**: `Fixtures/GoldenScenes/manifest.json` describes five scenes (canvas, optional card quad on a dark backdrop, text lines with normalized positions/font sizes, recognition languages, region mode, expected fields). Images are *not* committed — scenes render deterministically with Core Text at test time, keeping the repo free of binary artifacts while preserving the golden-corpus property (expected fields are pinned; any pipeline change that shifts recognized output fails loudly).
+2. **Scene coverage**: straight full-bleed English card; skewed card inside a dark scene through automatic region isolation; Hangul card (ko-KR + en-US auto-detect) exercising font fallback and Korean phone normalization (`010-0000-0001` → `01000000001`); compact low-contrast card (900×520, gray-on-gray) exercising preprocessing upscale/contrast; two-column layout seeding the upcoming column-aware classifier work.
+3. **Test support**: `Tests/AppleVisionAdapterTests/GoldenSceneSupport.swift` — `GoldenScene` decoder, `GoldenSceneRenderer` (deterministic Core Text), `GoldenFieldComparator` (whitespace-stripped case-folded set matching per field, with digit-only fallback matching for phone fields so formatting variance does not mask real regressions).
+4. **Tests** (`GoldenSceneRegressionTests.swift`, 98 total now): full-pipeline reproduction of every expected field plus region-mode conformance; repeated-scan stability guard over the Hangul scene (highest provider variance risk); manifest hygiene (unique `golden-*` identifiers, bounded geometry, known field keys, fictional namespaces — emails/websites under `.example`/`example.*`, phones containing `555` or `010` prefixes).
+5. Calibration was performed empirically: a temporary diagnostic dump confirmed all five scenes classify exactly as authored before expectations were frozen; the diagnostic file was removed after calibration.
+
+### Commands executed (all passing)
+
+```sh
+swift build
+swift test                       # 98 passed
+swift run card-field-eval Fixtures/Synthetic/public-alpha.json   # FP/FN = 0 on every field
+swift run card-field-eval Fixtures/Synthetic/phase1.json         # exit 0
+swift run card-field-scan --help # flags listed
+swift format lint --recursive --strict Sources Tests Package.swift
+```
+
+### Remaining risks / notes
+
+- Golden expectations were calibrated on this machine's Vision runtime (revision pinned to 3 in config defaults). Provider-level OCR drift across OS versions may require re-calibrating individual scenes; failures name the scene and field so triage is cheap.
+- `Scripts/check-repository.sh` still cannot run here (ripgrep absent); steps above were run individually as in prior sessions.
+- Scene rendering relies on system font fallback for Hangul (Helvetica lacks Hangul glyphs). If a future macOS drops the fallback font, only the Korean scene would need a font override in the renderer.
+
 ## Session 2026-08-23 — Build restored + generic token-only scanTokens API (completed)
 
 Goal: unblock the SwiftPM build broken by a duplicated adapter file, then expose the existing OCR pipeline as a generic token-only API for non-card documents (a future AnswerSheetFieldKit can consume it). No commits or pushes.
 
 ### Duplicate file resolution and recovery path
 
-`Sources/AppleVisionAdapter/AppleVisionAdapter 2.swift` (untracked, 52,370 B, mtime 2026-08-22 13:53, SHA-256 `5597bff1de12c2a9d9478e8af71f912035d6733fd503bd695223f73d64ae3c44`) shadowed the tracked implementation with an older snapshot missing `refinedForTesting`, the `nonisolated(unsafe)` regex statics, the perspective-correction top-up fix, and format normalization — tests reference `refinedForTesting`, so the tracked file was judged canonical. The duplicate was **moved (not deleted)** to `/Users/yoon/Documents/BusinessCardFieldKit-backups/AppleVisionAdapter 2.swift` (checksum verified identical after move). Restore with: `mv "/Users/yoon/Documents/BusinessCardFieldKit-backups/AppleVisionAdapter 2.swift" "Sources/AppleVisionAdapter/AppleVisionAdapter 2.swift"` — but do not: it reintroduces ambiguous-type build failures while both files exist in the target directory.
+`Sources/AppleVisionAdapter/AppleVisionAdapter 2.swift` (untracked, 52,370 B, mtime 2026-08-22 13:53, SHA-256 `5597bff1de12c2a9d9478e8af71f912035d6733fd503bd695223f73d64ae3c44`) shadowed the tracked implementation with an older snapshot missing `refinedForTesting`, the `nonisolated(unsafe)` regex statics, the perspective-correction top-up fix, and format normalization — tests reference `refinedForTesting`, so the tracked file was judged canonical. The duplicate was **moved (not deleted)** to `<repository-backups>/AppleVisionAdapter 2.swift` (checksum verified identical after move). Restoring it under `Sources/AppleVisionAdapter` would reintroduce ambiguous-type build failures while both files exist in the target directory.
 
 ### What changed
 
@@ -66,7 +670,8 @@ Goal: make the uncommitted OCR improvements GitHub-ready. No commits or pushes w
 
 1. **`swift format lint --strict` failures** in `AppleVisionAdapter.swift`, `ImagePreprocessing.swift`, `LayoutAnalyzer.swift`, `OCRUpgradeTests.swift` (semicolons, long lines, indentation, trailing commas, multiline expressions). Fixed by normalizing those four files with `swift format format --in-place`; diff reviewed to confirm whitespace/line-break-only changes with identical semantics.
 2. **Missing direct coverage for Vision revision clamping** (`recognitionRevision` 1...3). Added regression test "Recognition revisions are clamped to the supported 1...3 range" (87 tests total now).
-3. **Real provider domain in new test fixtures** (`gmail.com`). Replaced with fictional domains (`example.net`, `example.org`, mangled variants like `exampl3.net`) per PRIVACY.md/AGENTS.md rules.
+3. **Real provider domain in new test fixtures**. Replaced with reserved domains (`example.net`,
+   `example.org`, and `.example` OCR-error variants) per PRIVACY.md/AGENTS.md rules.
 4. **Environment caveat:** `Scripts/check-repository.sh` step at line 30 silently no-ops when `rg` is not installed (command-not-found inside an `if` does not fail under `set -e`). The script still exits 0. Locally verified the credential scan equivalent with `grep -rEn '(AKIA[0-9A-Z]{16}|-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----)' .` → no matches. Consider adding a guard such as `command -v rg >/dev/null || { echo "ripgrep required" >&2; exit 1; }`.
 
 ### Safety audit of the ten OCR improvements — results

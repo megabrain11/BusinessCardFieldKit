@@ -56,28 +56,49 @@ func hintPrecedence() {
   #expect(unhinted[1].language == "en")
 }
 
-@Test("Legacy encoded tokens without alternatives still decode")
+@Test("Legacy encoded tokens without identifiers or alternatives still decode")
 func legacyTokenDecoding() throws {
   let legacyJSON = """
     {
-      "id": "vision-0001",
       "text": "Alex Kim",
       "boundingBox": {"x": 0.1, "y": 0.75, "width": 0.35, "height": 0.08},
       "confidence": 0.97
     }
     """
   let decoded = try JSONDecoder().decode(OCRToken.self, from: Data(legacyJSON.utf8))
+  #expect(decoded.id.isEmpty)
   #expect(decoded.alternatives.isEmpty)
   #expect(decoded.text == "Alex Kim")
 
   let modern = OCRToken(
-    text: "alex@examp1e.net",
+    text: "alex@examp1e.example",
     boundingBox: .init(x: 0.1, y: 0.3, width: 0.5, height: 0.05),
     confidence: 0.9,
     alternatives: ["alex@example.net"]
   )
   let roundTripped = try JSONDecoder().decode(OCRToken.self, from: JSONEncoder().encode(modern))
   #expect(roundTripped.alternatives == ["alex@example.net"])
+}
+
+@Test("OCR input schema exposes every additive token field")
+func ocrInputSchemaFields() throws {
+  let repository = URL(fileURLWithPath: #filePath)
+    .deletingLastPathComponent()
+    .deletingLastPathComponent()
+    .deletingLastPathComponent()
+  let data = try Data(
+    contentsOf: repository.appendingPathComponent("Schemas/ocr-input.schema.json")
+  )
+  let schema = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+  let items = try #require(schema["items"] as? [String: Any])
+  let properties = try #require(items["properties"] as? [String: Any])
+
+  #expect(properties["id"] != nil)
+  #expect(properties["text"] != nil)
+  #expect(properties["boundingBox"] != nil)
+  #expect(properties["confidence"] != nil)
+  #expect(properties["language"] != nil)
+  #expect(properties["alternatives"] != nil)
 }
 
 @Test("Layout rows group vertically overlapping tokens top-to-bottom")

@@ -4,7 +4,8 @@ Read `AGENTS.md` first — it contains the authoritative project brief, hard rul
 
 Quick reminders specific to working here:
 
-- Run `swift test` before declaring anything done; 87+ tests must pass on macOS.
+- Run `swift test --no-parallel` before declaring anything done; the complete current suite must
+  pass on macOS.
 - `CardFieldCore` must stay free of Vision/CoreImage/UIKit imports. Image-domain code belongs in `AppleVisionAdapter`.
 - Never add real names, emails, phone numbers, or card images to tests, fixtures, or docs. Fictional data only (`example.com`, `555` numbers).
 - Contract types are versioned: extend additively with backward-compatible decoding (see `OCRToken.alternatives`).

@@ -397,6 +397,41 @@ func mixedContactLineWebExtraction() throws {
   #expect(!result.websites.map(\.normalizedValue).contains("ceo.cto"))
 }
 
+@Test("OCR whitespace around an email separator is repaired without creating a website")
+func spacedEmailSeparatorRecovery() throws {
+  let result = try CardFieldClassifier().classify([
+    patternToken("morgan @ cascade.example", id: "email", y: 0.30)
+  ])
+
+  #expect(result.emailAddresses.map(\.normalizedValue) == ["morgan@cascade.example"])
+  #expect(result.emailAddresses.first?.originalValue == "morgan @ cascade.example")
+  #expect(result.websites.isEmpty)
+}
+
+@Test("Spaced email recovery preserves a separate website on the same OCR line")
+func spacedEmailAndWebsiteRemainDistinct() throws {
+  let result = try CardFieldClassifier().classify([
+    patternToken(
+      "Email morgan @ cascade.example Web www.cascade.example",
+      id: "contacts",
+      y: 0.30
+    )
+  ])
+
+  #expect(result.emailAddresses.map(\.normalizedValue) == ["morgan@cascade.example"])
+  #expect(result.websites.map(\.normalizedValue) == ["www.cascade.example"])
+}
+
+@Test("At-sign prose without a domain remains unresolved")
+func atSignProseIsNotEmail() throws {
+  let result = try CardFieldClassifier().classify([
+    patternToken("Morgan @ Cascade Labs", id: "prose", y: 0.30)
+  ])
+
+  #expect(result.emailAddresses.isEmpty)
+  #expect(result.websites.isEmpty)
+}
+
 @Test("Science parks and romanized Korean streets are address-shaped")
 func expandedAddressPatterns() throws {
   let result = try CardFieldClassifier().classify([

@@ -9,7 +9,9 @@ Business cards contain personal data. BusinessCardFieldKit is designed to minimi
 - The core receives text observations, not card images.
 - The core does not persist OCR text or results.
 - Personal corrections remain local unless a host explicitly exports them.
-- Back-side analysis and image storage are outside the package.
+- Optional card-back recognition is local and transient. Raw barcode payloads are not exposed in
+  public metadata, logged, or persisted by the package.
+- Image storage remains outside the package.
 
 ## Prohibited repository content
 

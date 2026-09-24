@@ -1,0 +1,153 @@
+{
+  "schemaVersion": 1,
+  "corpusVersion": "card-back-synthetic-1",
+  "cases": [
+    {
+      "identifier": "back-vcard3-standard",
+      "layout": "standard",
+      "payloads": [{"value": "BEGIN:VCARD\nVERSION:3.0\nFN:Alex Kim\nORG:Example Labs\nTEL;TYPE=CELL:+1-202-555-0101\nEMAIL:alex.kim@example.com\nURL:https://example.com/alex\nEND:VCARD"}],
+      "tags": ["vcard-3", "standard"],
+      "expectedPayloadKinds": ["vCard"],
+      "backExpected": {"fullName": ["Alex Kim"], "organization": ["Example Labs"], "mobilePhoneNumbers": ["+1-202-555-0101"], "emailAddresses": ["alex.kim@example.com"], "websites": ["https://example.com/alex"]},
+      "mergedExpected": {"fullName": ["Alex Kim"], "organization": ["Example Labs"], "mobilePhoneNumbers": ["+1-202-555-0101"], "emailAddresses": ["alex.kim@example.com"], "websites": ["https://example.com/alex"]},
+      "reviewExpected": false
+    },
+    {
+      "identifier": "back-vcard4-standard",
+      "layout": "standard",
+      "payloads": [{"value": "BEGIN:VCARD\nVERSION:4.0\nFN:Jordan Lee\nORG:Example Works\nTITLE:Director\nTEL;TYPE=WORK:+1-202-555-0102\nEMAIL:jordan.lee@example.org\nEND:VCARD"}],
+      "tags": ["vcard-4", "standard"],
+      "expectedPayloadKinds": ["vCard"],
+      "backExpected": {"fullName": ["Jordan Lee"], "organization": ["Example Works"], "jobTitle": ["Director"], "workPhoneNumbers": ["+1-202-555-0102"], "emailAddresses": ["jordan.lee@example.org"]},
+      "mergedExpected": {"fullName": ["Jordan Lee"], "organization": ["Example Works"], "jobTitle": ["Director"], "workPhoneNumbers": ["+1-202-555-0102"], "emailAddresses": ["jordan.lee@example.org"]},
+      "reviewExpected": false
+    },
+    {
+      "identifier": "back-url-standard",
+      "layout": "standard",
+      "payloads": [{"value": "https://example.net/profile"}],
+      "tags": ["url", "standard"],
+      "expectedPayloadKinds": ["url"],
+      "backExpected": {"websites": ["https://example.net/profile"]},
+      "mergedExpected": {"websites": ["https://example.net/profile"]},
+      "reviewExpected": false
+    },
+    {
+      "identifier": "back-unsupported-standard",
+      "layout": "standard",
+      "payloads": [{"value": "fictional-reference-555-0199"}],
+      "tags": ["unsupported", "standard"],
+      "expectedPayloadKinds": ["unsupported"],
+      "backExpected": {},
+      "mergedExpected": {},
+      "reviewExpected": false
+    },
+    {
+      "identifier": "back-url-small",
+      "layout": "small",
+      "payloads": [{"value": "https://small.example.com/card"}],
+      "tags": ["url", "small"],
+      "expectedPayloadKinds": ["url"],
+      "backExpected": {"websites": ["https://small.example.com/card"]},
+      "mergedExpected": {"websites": ["https://small.example.com/card"]},
+      "reviewExpected": false
+    },
+    {
+      "identifier": "back-url-low-contrast",
+      "layout": "lowContrast",
+      "payloads": [{"value": "https://contrast.example.org/card"}],
+      "tags": ["url", "low-contrast"],
+      "expectedPayloadKinds": ["url"],
+      "backExpected": {"websites": ["https://contrast.example.org/card"]},
+      "mergedExpected": {"websites": ["https://contrast.example.org/card"]},
+      "reviewExpected": false
+    },
+    {
+      "identifier": "back-vcard-rotated",
+      "layout": "rotated",
+      "payloads": [{"value": "BEGIN:VCARD\nVERSION:3.0\nFN:Casey Park\nEMAIL:casey.park@example.net\nTEL;TYPE=CELL:+1-202-555-0103\nEND:VCARD"}],
+      "tags": ["vcard-3", "rotated"],
+      "expectedPayloadKinds": ["vCard"],
+      "backExpected": {"fullName": ["Casey Park"], "emailAddresses": ["casey.park@example.net"], "mobilePhoneNumbers": ["+1-202-555-0103"]},
+      "mergedExpected": {"fullName": ["Casey Park"], "emailAddresses": ["casey.park@example.net"], "mobilePhoneNumbers": ["+1-202-555-0103"]},
+      "reviewExpected": false
+    },
+    {
+      "identifier": "back-vcard-perspective",
+      "layout": "perspective",
+      "payloads": [{"value": "BEGIN:VCARD\nVERSION:4.0\nFN:Robin Choi\nEMAIL:robin.choi@example.org\nTEL;TYPE=WORK:+1-202-555-0104\nEND:VCARD"}],
+      "tags": ["vcard-4", "perspective"],
+      "expectedPayloadKinds": ["vCard"],
+      "backExpected": {"fullName": ["Robin Choi"], "emailAddresses": ["robin.choi@example.org"], "workPhoneNumbers": ["+1-202-555-0104"]},
+      "mergedExpected": {"fullName": ["Robin Choi"], "emailAddresses": ["robin.choi@example.org"], "workPhoneNumbers": ["+1-202-555-0104"]},
+      "reviewExpected": false
+    },
+    {
+      "identifier": "back-multiple-qr",
+      "layout": "multiple",
+      "payloads": [{"value": "https://multi.example.com"}, {"value": "BEGIN:VCARD\nVERSION:3.0\nFN:Taylor Han\nEMAIL:taylor.han@example.com\nEND:VCARD"}],
+      "tags": ["multiple", "url", "vcard-3"],
+      "expectedPayloadKinds": ["url", "vCard"],
+      "backExpected": {"fullName": ["Taylor Han"], "emailAddresses": ["taylor.han@example.com"], "websites": ["https://multi.example.com"]},
+      "mergedExpected": {"fullName": ["Taylor Han"], "emailAddresses": ["taylor.han@example.com"], "websites": ["https://multi.example.com"]},
+      "reviewExpected": false
+    },
+    {
+      "identifier": "back-qr-with-text",
+      "layout": "textAndQR",
+      "payloads": [{"value": "https://text.example.net/card"}],
+      "auxiliaryLines": ["Email support@text.example.net", "Phone +1-202-555-0188"],
+      "tags": ["url", "auxiliary-text"],
+      "expectedPayloadKinds": ["url"],
+      "backExpected": {"emailAddresses": ["support@text.example.net"], "workPhoneNumbers": ["+1-202-555-0188"], "websites": ["https://text.example.net/card"]},
+      "mergedExpected": {"emailAddresses": ["support@text.example.net"], "workPhoneNumbers": ["+1-202-555-0188"], "websites": ["https://text.example.net/card"]},
+      "reviewExpected": false
+    },
+    {
+      "identifier": "back-front-duplicate",
+      "layout": "standard",
+      "payloads": [{"value": "BEGIN:VCARD\nVERSION:3.0\nFN:Morgan Yu\nEMAIL:morgan.yu@example.com\nTEL;TYPE=CELL:+1-202-555-0105\nEND:VCARD"}],
+      "tags": ["vcard-3", "deduplication"],
+      "expectedPayloadKinds": ["vCard"],
+      "backExpected": {"fullName": ["Morgan Yu"], "emailAddresses": ["morgan.yu@example.com"], "mobilePhoneNumbers": ["+1-202-555-0105"]},
+      "front": {"fullName": ["Morgan Yu"], "emailAddresses": ["morgan.yu@example.com"], "workPhoneNumbers": ["+1 (202) 555-0105"]},
+      "mergedExpected": {"fullName": ["Morgan Yu"], "emailAddresses": ["morgan.yu@example.com"], "mobilePhoneNumbers": ["+1-202-555-0105"]},
+      "reviewExpected": false
+    },
+    {
+      "identifier": "back-front-conflict",
+      "layout": "standard",
+      "payloads": [{"value": "BEGIN:VCARD\nVERSION:4.0\nFN:Jamie Song\nEMAIL:jamie.song@example.org\nEND:VCARD"}],
+      "tags": ["vcard-4", "conflict-review"],
+      "expectedPayloadKinds": ["vCard"],
+      "backExpected": {"fullName": ["Jamie Song"], "emailAddresses": ["jamie.song@example.org"]},
+      "front": {"fullName": ["Avery Lim"]},
+      "mergedExpected": {"fullName": ["Jamie Song"], "emailAddresses": ["jamie.song@example.org"]},
+      "reviewExpected": true
+    },
+    {
+      "identifier": "back-isolated-perspective-nearby-text",
+      "layout": "isolatedPerspective",
+      "payloads": [{"value": "fictional-isolated-reference-555-0191"}],
+      "auxiliaryLines": ["Email nearby@example.net", "Phone +1-202-555-0191"],
+      "attemptsCardIsolation": true,
+      "tags": ["unsupported", "isolated-card", "perspective", "auxiliary-text"],
+      "expectedPayloadKinds": ["unsupported"],
+      "backExpected": {"emailAddresses": ["nearby@example.net"], "workPhoneNumbers": ["+1-202-555-0191"]},
+      "mergedExpected": {"emailAddresses": ["nearby@example.net"], "workPhoneNumbers": ["+1-202-555-0191"]},
+      "reviewExpected": false
+    },
+    {
+      "identifier": "back-isolated-perspective-multiple",
+      "layout": "isolatedPerspective",
+      "payloads": [{"value": "https://isolated.example.com/card"}, {"value": "BEGIN:VCARD\nVERSION:4.0\nFN:Riley Moon\nORG:Example Collective\nEMAIL:riley.moon@example.org\nEND:VCARD"}],
+      "auxiliaryLines": ["Email nearby.two@example.net", "Phone +1-202-555-0192"],
+      "attemptsCardIsolation": true,
+      "tags": ["url", "vcard-4", "multiple", "isolated-card", "perspective", "auxiliary-text"],
+      "expectedPayloadKinds": ["url", "vCard"],
+      "backExpected": {"fullName": ["Riley Moon"], "organization": ["Example Collective"], "emailAddresses": ["nearby.two@example.net", "riley.moon@example.org"], "workPhoneNumbers": ["+1-202-555-0192"], "websites": ["https://isolated.example.com/card"]},
+      "mergedExpected": {"fullName": ["Riley Moon"], "organization": ["Example Collective"], "emailAddresses": ["nearby.two@example.net", "riley.moon@example.org"], "workPhoneNumbers": ["+1-202-555-0192"], "websites": ["https://isolated.example.com/card"]},
+      "reviewExpected": false
+    }
+  ]
+}

@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 2,
+  "corpusVersion": "targeted-rerecognition-stress-1.0.0",
+  "profiles": {
+    "email": {
+      "lines": ["Morgan Vale", "Research Director", "CASCADE LABS", "morgan@cascade.example", "Mobile +1 202 555 0161"],
+      "recognitionLanguages": ["en-US"],
+      "automaticallyDetectsLanguage": false,
+      "expected": {"fullName": ["Morgan Vale"], "jobTitle": ["Research Director"], "organization": ["CASCADE LABS"], "emailAddresses": ["morgan@cascade.example"], "mobilePhoneNumbers": ["+12025550161"]}
+    },
+    "website": {
+      "lines": ["Riley North", "Product Lead", "HARBOR SYSTEMS", "www.harbor.example", "Tel +1 202 555 0162"],
+      "recognitionLanguages": ["en-US"],
+      "automaticallyDetectsLanguage": false,
+      "expected": {"fullName": ["Riley North"], "jobTitle": ["Product Lead"], "organization": ["HARBOR SYSTEMS"], "websites": ["www.harbor.example"], "workPhoneNumbers": ["+12025550162"]}
+    },
+    "mixed": {
+      "lines": ["윤새봄", "Engineering Lead", "푸른 연구소", "saebom@pureun.example", "휴대폰 010-0000-0063"],
+      "recognitionLanguages": ["ko-KR", "en-US"],
+      "automaticallyDetectsLanguage": true,
+      "expected": {"fullName": ["윤새봄"], "jobTitle": ["Engineering Lead"], "organization": ["푸른 연구소"], "emailAddresses": ["saebom@pureun.example"], "mobilePhoneNumbers": ["01000000063"]}
+    }
+  },
+  "layouts": [
+    {
+      "identifier": "target-email-small", "profile": "email", "preset": "left",
+      "canvas": {"width": 1300, "height": 760}, "tags": ["email-stress", "small-contact", "calibrated-threshold"],
+      "backgroundGray": 1.0, "textGray": 0.0, "targetedReRecognitionConfidenceLimit": 1.0,
+      "variants": [{"identifier": "reference", "tags": ["reference"], "contactFontScale": 0.78}, {"identifier": "smaller", "tags": ["small-contact"], "contactFontScale": 0.60}]
+    },
+    {
+      "identifier": "target-url-small", "profile": "website", "preset": "compact",
+      "canvas": {"width": 1150, "height": 650}, "tags": ["url-stress", "small-contact", "calibrated-threshold"],
+      "backgroundGray": 0.98, "textGray": 0.02, "targetedReRecognitionConfidenceLimit": 1.0,
+      "variants": [{"identifier": "reference", "tags": ["reference"], "contactFontScale": 0.76}, {"identifier": "smaller", "tags": ["small-contact"], "contactFontScale": 0.58}]
+    },
+    {
+      "identifier": "target-phone-lowcontrast", "profile": "email", "preset": "left",
+      "canvas": {"width": 1450, "height": 820}, "tags": ["phone-stress", "low-contrast", "calibrated-threshold"],
+      "backgroundGray": 0.92, "textGray": 0.08, "targetedReRecognitionConfidenceLimit": 1.0,
+      "variants": [{"identifier": "reference", "tags": ["reference"], "contactTextGrayDelta": 0.18}, {"identifier": "faint", "tags": ["low-contrast"], "contactTextGrayDelta": 0.32}]
+    },
+    {
+      "identifier": "target-email-blur", "profile": "email", "preset": "compact",
+      "canvas": {"width": 1200, "height": 680}, "tags": ["email-stress", "contact-blur", "calibrated-threshold"],
+      "backgroundGray": 1.0, "textGray": 0.0, "targetedReRecognitionConfidenceLimit": 1.0,
+      "variants": [{"identifier": "soft", "tags": ["contact-blur"], "contactBlurRadius": 0.45}, {"identifier": "strong", "tags": ["contact-blur"], "contactBlurRadius": 0.90}]
+    },
+    {
+      "identifier": "target-url-glare", "profile": "website", "preset": "centered",
+      "canvas": {"width": 1500, "height": 850}, "tags": ["url-stress", "contact-glare", "calibrated-threshold"],
+      "backgroundGray": 0.96, "textGray": 0.03, "targetedReRecognitionConfidenceLimit": 1.0,
+      "variants": [{"identifier": "mild", "tags": ["contact-glare"], "contactGlareOpacity": 0.10}, {"identifier": "strong", "tags": ["contact-glare"], "contactGlareOpacity": 0.22}]
+    },
+    {
+      "identifier": "target-phone-shadow", "profile": "website", "preset": "left",
+      "canvas": {"width": 1450, "height": 820}, "tags": ["phone-stress", "contact-shadow", "calibrated-threshold"],
+      "backgroundGray": 1.0, "textGray": 0.0, "targetedReRecognitionConfidenceLimit": 1.0,
+      "variants": [{"identifier": "mild", "tags": ["contact-shadow"], "contactShadowOpacity": 0.08}, {"identifier": "strong", "tags": ["contact-shadow"], "contactShadowOpacity": 0.18}]
+    },
+    {
+      "identifier": "target-mixed-compact", "profile": "mixed", "preset": "compact",
+      "canvas": {"width": 1200, "height": 700}, "tags": ["email-stress", "mixed-script", "calibrated-threshold"],
+      "backgroundGray": 0.98, "textGray": 0.02, "targetedReRecognitionConfidenceLimit": 1.0,
+      "variants": [{"identifier": "reference", "tags": ["reference"], "contactFontScale": 0.82}, {"identifier": "faint", "tags": ["low-contrast"], "contactFontScale": 0.72, "contactTextGrayDelta": 0.20}]
+    },
+    {
+      "identifier": "target-isolation-success", "profile": "email", "preset": "isolated",
+      "canvas": {"width": 1900, "height": 1100}, "tags": ["email-stress", "automatic-isolation", "calibrated-threshold"],
+      "backgroundGray": 0.18, "cardGray": 0.98, "textGray": 0.0, "attemptsCardIsolation": true,
+      "cardQuad": [[0.18, 0.20], [0.83, 0.23], [0.79, 0.74], [0.21, 0.71]],
+      "targetedReRecognitionConfidenceLimit": 1.0,
+      "variants": [{"identifier": "reference", "tags": ["reference"], "contactFontScale": 0.80}, {"identifier": "blurred", "tags": ["contact-blur"], "contactFontScale": 0.72, "contactBlurRadius": 0.45}]
+    },
+    {
+      "identifier": "target-isolation-fallback", "profile": "website", "preset": "left",
+      "canvas": {"width": 1500, "height": 850}, "tags": ["url-stress", "automatic-isolation", "expected-fallback", "calibrated-threshold"],
+      "backgroundGray": 1.0, "textGray": 0.0, "attemptsCardIsolation": true,
+      "cardRegionMinimumConfidence": 1.0, "usesSaliencyFallback": false,
+      "cardRegionPreferredAspectRatio": 9.0, "cardRegionAspectRatioTolerance": 0.0,
+      "targetedReRecognitionConfidenceLimit": 1.0,
+      "variants": [{"identifier": "reference", "tags": ["reference"], "contactFontScale": 0.84}, {"identifier": "faint", "tags": ["low-contrast"], "contactTextGrayDelta": 0.16}]
+    },
+    {
+      "identifier": "target-default-threshold-blur", "profile": "email", "preset": "compact",
+      "canvas": {"width": 1000, "height": 580}, "tags": ["email-stress", "contact-blur", "default-threshold"],
+      "backgroundGray": 0.96, "textGray": 0.04, "targetedReRecognitionConfidenceLimit": 0.35,
+      "variants": [{"identifier": "soft", "tags": ["contact-blur"], "contactFontScale": 0.66, "contactBlurRadius": 0.80}, {"identifier": "strong", "tags": ["contact-blur"], "contactFontScale": 0.58, "contactBlurRadius": 1.20}]
+    },
+    {
+      "identifier": "target-default-threshold-glare", "profile": "mixed", "preset": "left",
+      "canvas": {"width": 1350, "height": 780}, "tags": ["phone-stress", "contact-glare", "default-threshold", "mixed-script"],
+      "backgroundGray": 0.97, "textGray": 0.02, "targetedReRecognitionConfidenceLimit": 0.35,
+      "variants": [{"identifier": "mild", "tags": ["contact-glare"], "contactGlareOpacity": 0.18}, {"identifier": "strong", "tags": ["contact-glare"], "contactGlareOpacity": 0.30}]
+    },
+    {
+      "identifier": "target-nonexecution-control", "profile": "website", "preset": "twoColumn",
+      "canvas": {"width": 1500, "height": 850}, "tags": ["url-stress", "nonexecution-control", "two-column"],
+      "backgroundGray": 1.0, "textGray": 0.0, "targetedReRecognitionConfidenceLimit": 0.0,
+      "variants": [{"identifier": "reference", "tags": ["reference"]}, {"identifier": "low-contrast", "tags": ["low-contrast"], "contactTextGrayDelta": 0.12}]
+    }
+  ]
+}

@@ -354,3 +354,27 @@ func repositoryJSONExamplesDecode() throws {
     #expect(try JSONSerialization.jsonObject(with: data) is [String: Any])
   }
 }
+
+@Test("README quick start remains valid against the public API")
+func readmeQuickStart() throws {
+  let observations = [
+    OCRToken(
+      id: "name",
+      text: "Avery Quinn",
+      boundingBox: .init(x: 0.10, y: 0.75, width: 0.35, height: 0.08),
+      confidence: 0.97,
+      language: "en"
+    ),
+    OCRToken(
+      id: "email",
+      text: "avery.quinn@example.com",
+      boundingBox: .init(x: 0.10, y: 0.25, width: 0.55, height: 0.05),
+      confidence: 0.99,
+      language: "en"
+    ),
+  ]
+
+  let result = try CardFieldClassifier().classify(observations)
+  #expect(result.fullName?.normalizedValue == "Avery Quinn")
+  #expect(result.emailAddresses.map(\.normalizedValue) == ["avery.quinn@example.com"])
+}
