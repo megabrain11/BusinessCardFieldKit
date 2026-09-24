@@ -37,6 +37,9 @@ syntax, the credential scan, and `git diff --check` passed.
    `Docs/RELEASE_NOTES_0.2.0.md`.
 2. Keep `codex/private-barcode-recovery-validation` as the detailed history until the release is
    published.
+3. `claude/refine-selected-card-only` builds on this candidate with an exact-parity change that
+   runs targeted re-recognition only for the selected card. Decide whether it ships in `v0.2.0`;
+   its own handoff entry records the evidence.
 
 ## Session 2026-09-22 — Open-source adoption and v0.2.0 release preparation (completed)
 
